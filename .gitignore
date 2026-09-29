@@ -6,3 +6,8 @@ node_modules
 .env.production
 
 /lib/generated/prisma
+
+.vercel
+.env*
+
+.env*.local

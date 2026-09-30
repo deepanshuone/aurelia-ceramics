@@ -1,2 +1,37 @@
-import Header from '../../components/Header';
-export default function Contact(){return <><Header/><main><section className="contact"><div className="container contact-grid"><div><p className="kicker">LET'S WORK TOGETHER</p><h1>Tell us what<br/><em>you’re building.</em></h1><p>For product enquiries, wholesale requirements, hotel projects or custom/OEM requests, send us your details.</p><div className="contact-info"><span>hello@aureliaceramics.in</span><span>+91 00000 00000</span><span>Morbi, Gujarat · India</span></div></div><form className="form"><label>Name<input placeholder="Your name"/></label><label>Work email<input type="email" placeholder="you@company.com"/></label><label>Requirement<select defaultValue=""><option value="" disabled>Select requirement</option><option>Wholesale / Bulk order</option><option>Hotel / Restaurant project</option><option>Custom / OEM</option><option>Product enquiry</option></select></label><label>Message<textarea placeholder="Tell us about your requirement" rows={5}/></label><button className="button dark" type="button">Send enquiry →</button></form></div></section></main></>}
+import type { Metadata } from 'next';
+import ContactForm from './ContactForm';
+
+export const metadata: Metadata = {
+  title: 'Contact Us',
+  description: 'Get in touch with Aurelia Ceramics for product enquiries, wholesale requirements, hotel projects or custom/OEM requests.',
+};
+
+export default function Contact() {
+  return (
+    <main>
+      <section className="contact">
+        <div className="container contact-grid">
+          <div>
+            <p className="kicker">LET&apos;S WORK TOGETHER</p>
+            <h1>
+              Tell us what
+              <br />
+              <em>you&apos;re building.</em>
+            </h1>
+            <p>
+              For product enquiries, wholesale requirements, hotel projects or
+              custom/OEM requests, send us your details.
+            </p>
+            <div className="contact-info">
+              <span>hello@aureliaceramics.in</span>
+              <span>+91 00000 00000</span>
+              <span>Morbi, Gujarat · India</span>
+            </div>
+          </div>
+
+          <ContactForm />
+        </div>
+      </section>
+    </main>
+  );
+}

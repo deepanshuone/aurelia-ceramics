@@ -1,76 +1,76 @@
-export type CartItem = {
+// Shared cart types plus the guest (logged-out) cart stored in localStorage.
+// Guests only persist slug + quantity; everything else is fetched live from
+// the server so prices and stock can never be stale or tampered with.
+
+export type CartLine = {
+  productId: string;
   slug: string;
   name: string;
   price: number;
+  mrp: number | null;
   image: string;
+  stock: number;
+  quantity: number;
+  available: boolean;
+};
+
+export type CartResponse = {
+  items: CartLine[];
+  notices: string[];
+};
+
+export type GuestCartItem = {
+  slug: string;
   quantity: number;
 };
 
 const CART_KEY = "aurelia-cart";
 
-export function getCart(): CartItem[] {
+export const FREE_DELIVERY_THRESHOLD = 2000;
+export const DELIVERY_FEE = 99;
+
+export function getCartTotals(items: CartLine[]) {
+  const subtotal = items
+    .filter((item) => item.available)
+    .reduce((total, item) => total + item.price * item.quantity, 0);
+  const delivery = subtotal === 0 || subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
+  return { subtotal, delivery, total: subtotal + delivery };
+}
+
+export function readGuestCart(): GuestCartItem[] {
   if (typeof window === "undefined") return [];
 
-  const cart = localStorage.getItem(CART_KEY);
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
 
-  return cart ? JSON.parse(cart) : [];
-}
-
-export function saveCart(cart: CartItem[]) {
-  localStorage.setItem(CART_KEY, JSON.stringify(cart));
-
-  window.dispatchEvent(new Event("cartUpdated"));
-}
-
-export function addToCart(item: CartItem) {
-  const cart = getCart();
-
-  const existingItem = cart.find(
-    (product) => product.slug === item.slug
-  );
-
-  if (existingItem) {
-    existingItem.quantity += item.quantity;
-  } else {
-    cart.push(item);
+    // Older builds stored full product snapshots here; keep only what we trust.
+    return parsed
+      .filter(
+        (item): item is GuestCartItem =>
+          typeof item?.slug === "string" &&
+          Number.isInteger(item?.quantity) &&
+          item.quantity > 0
+      )
+      .map(({ slug, quantity }) => ({ slug, quantity }));
+  } catch {
+    return [];
   }
-
-  saveCart(cart);
 }
 
-export function removeFromCart(slug: string) {
-  const cart = getCart().filter(
-    (product) => product.slug !== slug
-  );
-
-  saveCart(cart);
-}
-
-export function updateCartQuantity(
-  slug: string,
-  quantity: number
-) {
-  const cart = getCart();
-
-  const item = cart.find(
-    (product) => product.slug === slug
-  );
-
-  if (!item) return;
-
-  if (quantity <= 0) {
-    removeFromCart(slug);
-    return;
+export function writeGuestCart(items: GuestCartItem[]) {
+  try {
+    localStorage.setItem(CART_KEY, JSON.stringify(items));
+  } catch {
+    // Storage full or blocked; the in-memory cart still works for this visit.
   }
-
-  item.quantity = quantity;
-
-  saveCart(cart);
 }
 
-export function getCartCount() {
-  return getCart().reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
+export function clearGuestCart() {
+  try {
+    localStorage.removeItem(CART_KEY);
+  } catch {
+    // ignore
+  }
 }

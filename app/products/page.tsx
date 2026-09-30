@@ -1,55 +1,123 @@
+import type { Metadata } from "next";
 import { prisma } from "../../lib/prisma";
+import { Prisma } from "../../lib/generated/prisma/client";
 import ProductCatalogue from "../../components/ProductCatalogue";
+import ProductFilters from "../../components/ProductFilters";
 
-const imageMap: Record<string, string> = {
-  "ivory-dinner-collection":
-    "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1000&q=85",
-
-  "classic-white-plate":
-    "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&w=1000&q=85",
-
-  "stone-ceramic-bowl":
-    "https://images.unsplash.com/photo-1584269600519-112d071b35f4?auto=format&fit=crop&w=1000&q=85",
-
-  "heritage-coffee-mug":
-    "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=1000&q=85",
-
-  "modern-serving-collection":
-    "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1000&q=85",
-
-  "hospitality-whiteware":
-    "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=1000&q=85",
+type SearchParams = {
+  search?: string;
+  category?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  inStock?: string;
+  sort?: string;
 };
 
-const categories = [
-  "All Products",
-  "Dinner Sets",
-  "Plates",
-  "Bowls",
-  "Cups & Mugs",
-  "Serving Ware",
-  "Hotel & Restaurant",
-];
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const search = params.search?.trim();
+  const category = params.category?.trim();
 
-export default async function ProductsPage() {
-const dbProducts = await prisma.product.findMany({
-  where: {
-    isActive: true,
-  },
-  include: {
-    category: true,
-  },
-  orderBy: {
-    createdAt: "desc",
-  },
-});
+  return {
+    title: search
+      ? `Search results for "${search.slice(0, 60)}"`
+      : category
+        ? `Ceramic ${category.slice(0, 60)}`
+        : "Shop Ceramic Tableware",
+    description:
+      "Browse our full collection of premium ceramic crockery - dinner sets, plates, bowls, mugs, tea sets, jars, planters and hand-painted Khurja pottery.",
+    // Sort/filter variations point at one canonical listing per category.
+    alternates: {
+      canonical: category ? `/products?category=${encodeURIComponent(category)}` : "/products",
+    },
+    // Internal search results are thin/duplicate content.
+    ...(search ? { robots: { index: false, follow: true } } : {}),
+  };
+}
 
-const products = dbProducts.map((product) => ({
-  ...product,
-  price: Number(product.price),
-  mrp: product.mrp ? Number(product.mrp) : null,
-  rating: product.rating ? Number(product.rating) : null,
-}));
+const SORT_OPTIONS: Record<string, Prisma.ProductOrderByWithRelationInput> = {
+  newest: { createdAt: "desc" },
+  "price-asc": { price: "asc" },
+  "price-desc": { price: "desc" },
+  popularity: { rating: "desc" },
+};
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+
+  const search = params.search?.trim() ?? "";
+  const category = params.category?.trim() ?? "";
+  const minPrice = params.minPrice ? Number(params.minPrice) : undefined;
+  const maxPrice = params.maxPrice ? Number(params.maxPrice) : undefined;
+  const inStock = params.inStock === "1";
+  const sort = params.sort && SORT_OPTIONS[params.sort] ? params.sort : "newest";
+
+  const where: Prisma.ProductWhereInput = { isActive: true, category: { isActive: true } };
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+      { category: { name: { contains: search, mode: "insensitive" } } },
+    ];
+  }
+
+  if (category && category !== "All Products") {
+    // Keep the visibility check: a hidden category stays hidden even by name.
+    where.category = { name: category, isActive: true };
+  }
+
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.price = {};
+    if (minPrice !== undefined && !Number.isNaN(minPrice)) {
+      where.price.gte = minPrice;
+    }
+    if (maxPrice !== undefined && !Number.isNaN(maxPrice)) {
+      where.price.lte = maxPrice;
+    }
+  }
+
+  if (inStock) {
+    where.stock = { gt: 0 };
+  }
+
+  const [dbProducts, dbCategories] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      include: {
+        category: true,
+        images: { orderBy: { sortOrder: "asc" }, take: 1 },
+      },
+      orderBy: SORT_OPTIONS[sort],
+    }),
+    prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const products = dbProducts.map((product) => ({
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    code: product.code,
+    price: Number(product.price),
+    mrp: product.mrp ? Number(product.mrp) : null,
+    stock: product.stock,
+    rating: product.rating ? Number(product.rating) : null,
+    category: { name: product.category.name },
+    image: product.images[0]?.url ?? "/placeholder-product.svg",
+  }));
+
+  const categories = dbCategories.map((c) => c.name);
 
   return (
     <main className="products-page">
@@ -79,19 +147,40 @@ const products = dbProducts.map((product) => ({
           <div className="catalogue-top">
             <div>
               <p className="catalogue-label">COLLECTIONS</p>
-              <h2>Explore Products</h2>
+              <h2>
+                {search ? `Results for "${search}"` : "Explore Products"}
+              </h2>
             </div>
 
             <p className="product-count">
-              {products.length} Products
+              {products.length} {products.length === 1 ? "Product" : "Products"}
             </p>
           </div>
 
-          <ProductCatalogue
-            products={products}
-            imageMap={imageMap}
+          <ProductFilters
             categories={categories}
+            current={{
+              search,
+              category,
+              minPrice: params.minPrice ?? "",
+              maxPrice: params.maxPrice ?? "",
+              inStock,
+              sort,
+            }}
           />
+
+          {products.length === 0 ? (
+            <div className="catalogue-empty">
+              <p>
+                {search
+                  ? `No products found for "${search}".`
+                  : "No products match these filters."}
+              </p>
+              <span>Try a different search term or clear your filters.</span>
+            </div>
+          ) : (
+            <ProductCatalogue products={products} />
+          )}
         </div>
       </section>
     </main>

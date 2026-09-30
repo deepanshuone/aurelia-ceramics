@@ -1,3 +1,7 @@
+import Link from "next/link";
+import SmartImage from "../components/SmartImage";
+import { SITE_DESCRIPTION, SITE_NAME, getSiteUrl, jsonLd } from "../lib/site";
+
 const categories = [
   {
     name: "Dinner Sets",
@@ -15,7 +19,7 @@ const categories = [
     name: "Bowls",
     description: "Functional shapes crafted for beautiful presentation.",
     image:
-      "https://images.unsplash.com/photo-1584269600519-112d071b35f4?auto=format&fit=crop&w=900&q=85",
+      "https://images.unsplash.com/photo-1523367438061-01c055ce790c?auto=format&fit=crop&w=900&q=85",
   },
   {
     name: "Cups & Mugs",
@@ -54,38 +58,36 @@ const products = [
     name: "Stone Ceramic Bowl",
     category: "Bowls",
     image:
-      "https://images.unsplash.com/photo-1584269600519-112d071b35f4?auto=format&fit=crop&w=900&q=85",
+      "https://images.unsplash.com/photo-1523367438061-01c055ce790c?auto=format&fit=crop&w=900&q=85",
   },
 ];
 
 export default function Home() {
+  const site = getSiteUrl();
+  const structuredData = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: site,
+      description: SITE_DESCRIPTION,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: SITE_NAME,
+      url: site,
+      potentialAction: {
+        "@type": "SearchAction",
+        target: `${site}/products?search={search_term_string}`,
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ];
+
   return (
     <main>
-      {/* NAVBAR */}
-      <header className="navbar">
-        <div className="container nav-inner">
-          <a href="/" className="logo">
-            <span className="logo-mark">A</span>
-            <span>
-              <strong>AURELIA</strong>
-              <small>CERAMICS</small>
-            </span>
-          </a>
-
-          <nav className="nav-links">
-            <a href="/">Home</a>
-            <a href="/products">Products</a>
-            <a href="/about">About Us</a>
-            <a href="#b2b">B2B / Bulk</a>
-            <a href="/contact">Contact</a>
-          </nav>
-
-          <a href="/contact" className="quote-btn">
-            Get a Quote
-          </a>
-        </div>
-      </header>
-
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
       {/* HERO */}
       <section className="hero">
         <div className="hero-overlay" />
@@ -105,13 +107,13 @@ export default function Home() {
           </p>
 
           <div className="hero-buttons">
-            <a href="/products" className="primary-btn">
+            <Link href="/products" className="primary-btn">
               Explore Collection <span>→</span>
-            </a>
+            </Link>
 
-            <a href="/contact" className="secondary-btn">
+            <Link href="/contact" className="secondary-btn">
               Bulk Enquiry
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -146,9 +148,9 @@ export default function Home() {
               living and professional hospitality.
             </p>
 
-            <a href="/about" className="text-link">
+            <Link href="/about" className="text-link">
               Discover our story <span>→</span>
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -162,19 +164,19 @@ export default function Home() {
               <h2>Our Collections</h2>
             </div>
 
-            <a href="/products" className="text-link">
+            <Link href="/products" className="text-link">
               View all products <span>→</span>
-            </a>
+            </Link>
           </div>
 
           <div className="category-grid">
             {categories.map((category) => (
-              <a
-                href="/products"
+              <Link
+                href={`/products?category=${encodeURIComponent(category.name)}`}
                 className="category-card"
                 key={category.name}
               >
-                <img src={category.image} alt={category.name} />
+                <SmartImage src={category.image} alt={category.name} fill sizes="(max-width: 700px) 100vw, 33vw" />
 
                 <div className="category-overlay" />
 
@@ -183,7 +185,7 @@ export default function Home() {
                   <span>{category.description}</span>
                   <b>Explore →</b>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -198,16 +200,16 @@ export default function Home() {
               <h2>Featured Collection</h2>
             </div>
 
-            <a href="/products" className="text-link">
+            <Link href="/products" className="text-link">
               Browse collection <span>→</span>
-            </a>
+            </Link>
           </div>
 
           <div className="product-grid">
             {products.map((product) => (
-              <a href="/products" className="product-card" key={product.name}>
+              <Link href="/products" className="product-card" key={product.name}>
                 <div className="product-image">
-                  <img src={product.image} alt={product.name} />
+                  <SmartImage src={product.image} alt={product.name} fill sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw" />
                   <span className="product-arrow">↗</span>
                 </div>
 
@@ -215,7 +217,7 @@ export default function Home() {
                   <p>{product.category}</p>
                   <h3>{product.name}</h3>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -291,51 +293,11 @@ export default function Home() {
             </p>
           </div>
 
-          <a href="/contact" className="primary-btn light-btn">
+          <Link href="/contact" className="primary-btn light-btn">
             Discuss Your Requirement <span>→</span>
-          </a>
+          </Link>
         </div>
       </section>
-
-      {/* FOOTER */}
-      <footer className="footer">
-        <div className="container footer-grid">
-          <div>
-            <a href="/" className="logo footer-logo">
-              <span className="logo-mark">A</span>
-              <span>
-                <strong>AURELIA</strong>
-                <small>CERAMICS</small>
-              </span>
-            </a>
-
-            <p>
-              Premium ceramic crockery for modern homes and professional
-              hospitality.
-            </p>
-          </div>
-
-          <div>
-            <h4>Explore</h4>
-            <a href="/products">Products</a>
-            <a href="/about">About Us</a>
-            <a href="#b2b">B2B / Bulk Orders</a>
-            <a href="/contact">Contact</a>
-          </div>
-
-          <div>
-            <h4>Contact</h4>
-            <p>India</p>
-            <p>hello@aureliaceramics.com</p>
-            <p>+91 00000 00000</p>
-          </div>
-        </div>
-
-        <div className="container footer-bottom">
-          <span>© 2026 Aurelia Ceramics. All rights reserved.</span>
-          <span>Premium Ceramic Tableware</span>
-        </div>
-      </footer>
     </main>
   );
 }

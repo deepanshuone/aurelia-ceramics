@@ -1,93 +1,61 @@
-"use client";
-
-import { useState } from "react";
+import Link from "next/link";
+import SmartImage from "./SmartImage";
 
 type Product = {
   id: string;
   name: string;
   slug: string;
   code: string;
-  category: {
-    name: string;
-  };
+  price: number;
+  mrp: number | null;
+  stock: number;
+  rating: number | null;
+  category: { name: string };
+  image: string;
 };
 
 type Props = {
   products: Product[];
-  imageMap: Record<string, string>;
-  categories: string[];
 };
 
-export default function ProductCatalogue({
-  products,
-  imageMap,
-  categories,
-}: Props) {
-  const [selectedCategory, setSelectedCategory] = useState("All Products");
-
-  const filteredProducts =
-    selectedCategory === "All Products"
-      ? products
-      : products.filter(
-          (product) => product.category.name === selectedCategory
-        );
-
+export default function ProductCatalogue({ products }: Props) {
   return (
-    <>
-      {/* CATEGORY FILTER */}
-      <div className="category-filter">
-        {categories.map((category) => (
-          <button
-            key={category}
-            className={selectedCategory === category ? "active" : ""}
-            onClick={() => setSelectedCategory(category)}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
+    <div className="catalogue-grid">
+      {products.map((product) => (
+        <article className="catalogue-card" key={product.slug}>
+          <Link href={`/products/${product.slug}`}>
+            <div className="catalogue-image">
+              <SmartImage src={product.image} alt={product.name} fill sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw" />
 
-      {/* PRODUCT GRID */}
-      <div className="catalogue-grid">
-        {filteredProducts.map((product) => (
-          <article className="catalogue-card" key={product.slug}>
-            <a href={`/products/${product.slug}`}>
-              <div className="catalogue-image">
-                <img
-                  src={imageMap[product.slug]}
-                  alt={product.name}
-                />
+              {product.stock <= 0 && (
+                <span className="catalogue-stock-badge">Out of Stock</span>
+              )}
 
-                <span className="catalogue-arrow">↗</span>
-              </div>
-            </a>
+              <span className="catalogue-arrow">↗</span>
+            </div>
+          </Link>
 
-            <div className="catalogue-info">
-              <div>
-                <p>{product.category.name}</p>
-                <h3>{product.name}</h3>
-              </div>
-
-              <span className="product-code">
-                {product.code}
-              </span>
+          <div className="catalogue-info">
+            <div>
+              <p>{product.category.name}</p>
+              <h3>{product.name}</h3>
             </div>
 
-            <a
-              href={`/products/${product.slug}`}
-              className="view-product"
-            >
-              View Product <span>→</span>
-            </a>
-          </article>
-        ))}
-      </div>
+            <span className="product-code">{product.code}</span>
+          </div>
 
-      {filteredProducts.length === 0 && (
-        <p className="product-count">
-          No products found.
-        </p>
-      )}
-    </>
+          <div className="catalogue-price">
+            <strong>₹{product.price.toLocaleString("en-IN")}</strong>
+            {product.mrp && product.mrp > product.price && (
+              <del>₹{product.mrp.toLocaleString("en-IN")}</del>
+            )}
+          </div>
+
+          <Link href={`/products/${product.slug}`} className="view-product">
+            View Product <span>→</span>
+          </Link>
+        </article>
+      ))}
+    </div>
   );
 }

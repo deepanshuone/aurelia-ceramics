@@ -1,48 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import {
-    CartItem,
-    getCart,
-    removeFromCart,
-    updateCartQuantity,
-} from "../../lib/cart";
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useCart } from "../../components/CartProvider";
+import { CartLine, getCartTotals } from "../../lib/cart";
+
+const MAX_LINE_QUANTITY = 99;
 
 export default function CartPage() {
-    const [cart, setCart] = useState<CartItem[]>([]);
+    const {
+        items: cart,
+        loading,
+        notices,
+        dismissNotices,
+        updateQuantity,
+        removeItem,
+    } = useCart();
 
-    useEffect(() => {
-        setCart(getCart());
-    }, []);
+    const { status } = useSession();
+    const [busySlug, setBusySlug] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    function refreshCart() {
-        setCart(getCart());
+    async function run(item: CartLine, action: () => ReturnType<typeof removeItem>) {
+        setBusySlug(item.slug);
+        setError(null);
+        const result = await action();
+        setBusySlug(null);
+        if (!result.ok) setError(result.error);
     }
 
-    function increase(item: CartItem) {
-        updateCartQuantity(item.slug, item.quantity + 1);
-        refreshCart();
+    function increase(item: CartLine) {
+        run(item, () => updateQuantity(item.slug, item.quantity + 1));
     }
 
-    function decrease(item: CartItem) {
-        updateCartQuantity(item.slug, item.quantity - 1);
-        refreshCart();
+    function decrease(item: CartLine) {
+        run(item, () => updateQuantity(item.slug, item.quantity - 1));
     }
 
-    function remove(item: CartItem) {
-        removeFromCart(item.slug);
-        refreshCart();
+    function remove(item: CartLine) {
+        run(item, () => removeItem(item.slug));
     }
 
-    const subtotal = cart.reduce(
-        (total, item) => total + item.price * item.quantity,
-        0
-    );
+    const { subtotal, delivery, total } = getCartTotals(cart);
+    const hasUnavailable = cart.some((item) => !item.available);
 
-    const delivery = subtotal >= 2000 ? 0 : 99;
-
-    const total = subtotal + delivery;
+    if (loading && cart.length === 0) {
+        return (
+            <main className="cart-page">
+                <div className="cart-container empty-cart">
+                    <p className="section-label">YOUR CART</p>
+                    <p>Loading your cart…</p>
+                </div>
+            </main>
+        );
+    }
 
     if (cart.length === 0) {
         return (
@@ -82,60 +94,108 @@ export default function CartPage() {
                     </h1>
                 </div>
 
+                {notices.length > 0 && (
+                    <div className="cart-notice" role="status">
+                        <ul>
+                            {notices.map((notice) => (
+                                <li key={notice}>{notice}</li>
+                            ))}
+                        </ul>
+                        <button type="button" onClick={dismissNotices} aria-label="Dismiss">
+                            ×
+                        </button>
+                    </div>
+                )}
+
+                {error && (
+                    <p className="form-error cart-error" role="alert">
+                        {error}
+                    </p>
+                )}
+
                 <div className="cart-layout">
                     {/* CART ITEMS */}
 
                     <div className="cart-items">
-                        {cart.map((item) => (
-                            <div className="cart-item" key={item.slug}>
-                                <img
-                                    src={item.image}
-                                    alt={item.name}
-                                />
+                        {cart.map((item) => {
+                            const busy = busySlug === item.slug;
+                            const atMax =
+                                item.quantity >= Math.min(item.stock, MAX_LINE_QUANTITY);
 
-                                <div className="cart-item-info">
-                                    <p>PRODUCT</p>
+                            return (
+                                <div
+                                    className={`cart-item${item.available ? "" : " unavailable"}`}
+                                    key={item.slug}
+                                >
+                                    <Link href={`/products/${item.slug}`}>
+                                        <img src={item.image} alt={item.name} />
+                                    </Link>
 
-                                    <h2>{item.name}</h2>
+                                    <div className="cart-item-info">
+                                        <p>PRODUCT</p>
 
-                                    <strong>
-                                        ₹{item.price.toLocaleString("en-IN")}
-                                    </strong>
+                                        <h2>
+                                            <Link href={`/products/${item.slug}`}>{item.name}</Link>
+                                        </h2>
 
-                                    <div className="cart-item-bottom">
-                                        <div className="cart-quantity">
+                                        <strong>
+                                            ₹{item.price.toLocaleString("en-IN")}
+                                        </strong>
+
+                                        {!item.available ? (
+                                            <span className="cart-stock-note out">
+                                                Out of stock — remove to continue
+                                            </span>
+                                        ) : item.stock <= 5 ? (
+                                            <span className="cart-stock-note">
+                                                Only {item.stock} left
+                                            </span>
+                                        ) : null}
+
+                                        <div className="cart-item-bottom">
+                                            {item.available && (
+                                                <div className="cart-quantity">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => decrease(item)}
+                                                        disabled={busy}
+                                                        aria-label={`Decrease ${item.name} quantity`}
+                                                    >
+                                                        −
+                                                    </button>
+
+                                                    <span>{item.quantity}</span>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => increase(item)}
+                                                        disabled={busy || atMax}
+                                                        aria-label={`Increase ${item.name} quantity`}
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                            )}
+
                                             <button
-                                                onClick={() => decrease(item)}
+                                                type="button"
+                                                className="remove-btn"
+                                                onClick={() => remove(item)}
+                                                disabled={busy}
                                             >
-                                                −
-                                            </button>
-
-                                            <span>{item.quantity}</span>
-
-                                            <button
-                                                onClick={() => increase(item)}
-                                            >
-                                                +
+                                                Remove
                                             </button>
                                         </div>
+                                    </div>
 
-                                        <button
-                                            className="remove-btn"
-                                            onClick={() => remove(item)}
-                                        >
-                                            Remove
-                                        </button>
+                                    <div className="cart-item-total">
+                                        {item.available
+                                            ? `₹${(item.price * item.quantity).toLocaleString("en-IN")}`
+                                            : "—"}
                                     </div>
                                 </div>
-
-                                <div className="cart-item-total">
-                                    ₹
-                                    {(
-                                        item.price * item.quantity
-                                    ).toLocaleString("en-IN")}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {/* SUMMARY */}
@@ -170,9 +230,25 @@ export default function CartPage() {
                                 ₹{total.toLocaleString("en-IN")}
                             </strong>
                         </div>
-                        <Link href="/checkout" className="checkout-btn">
-                            Proceed to Checkout →
-                        </Link>
+
+                        {hasUnavailable ? (
+                            <p className="cart-blocked">
+                                Remove out-of-stock items to proceed to checkout.
+                            </p>
+                        ) : (
+                            <Link
+                                href={
+                                    status === "authenticated"
+                                        ? "/checkout"
+                                        : "/login?callbackUrl=/checkout"
+                                }
+                                className="checkout-btn"
+                            >
+                                {status === "authenticated"
+                                    ? "Proceed to Checkout →"
+                                    : "Log in to Checkout →"}
+                            </Link>
+                        )}
 
                         <Link
                             href="/products"

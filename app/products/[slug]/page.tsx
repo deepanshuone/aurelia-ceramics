@@ -1,346 +1,368 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "../../../lib/prisma";
 import ProductPurchase from "./ProductPurchase";
-const productData: Record<string, any> = {
-    "ivory-dinner-collection": {
-        name: "Ivory Dinner Collection",
-        category: "Dinner Sets",
-        code: "AC-DS-001",
-        price: 1499,
-        mrp: 1999,
-        discount: 25,
-        stock: 24,
-        image:
-            "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1400&q=90",
-        description:
-            "A timeless ceramic dinner collection designed for elegant everyday dining, hospitality spaces and premium table settings.",
-        specifications: [
-            ["Material", "Ceramic"],
-            ["Finish", "Ivory"],
-            ["Pieces", "16 Pieces"],
-            ["Usage", "Dining / Hospitality"],
-            ["Customization", "Available"],
-        ],
-    },
+import SmartImage from "../../../components/SmartImage";
+import { SITE_NAME, getSiteUrl, jsonLd } from "../../../lib/site";
 
-    "classic-white-plate": {
-        name: "Classic White Plate",
-        category: "Plates",
-        code: "AC-PL-001",
-        price: 299,
-        mrp: 399,
-        discount: 25,
-        stock: 85,
-        image:
-            "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&w=1400&q=90",
-        description:
-            "A versatile ceramic plate with a clean profile, designed for restaurants, hotels and modern dining environments.",
-        specifications: [
-            ["Material", "Ceramic"],
-            ["Finish", "Classic White"],
-            ["Size", "10 Inch"],
-            ["Usage", "Dining / Food Service"],
-            ["Customization", "Available"],
-        ],
+// cache(): generateMetadata and the page share one query per request.
+const getProduct = cache(async (slug: string) => {
+  const product = await prisma.product.findUnique({
+    where: { slug },
+    include: {
+      category: true,
+      images: { orderBy: { sortOrder: "asc" } },
+      variants: true,
     },
+  });
 
-    "stone-ceramic-bowl": {
-        name: "Stone Ceramic Bowl",
-        category: "Bowls",
-        code: "AC-BL-001",
-        price: 349,
-        mrp: 449,
-        discount: 22,
-        stock: 42,
-        image:
-            "https://images.unsplash.com/photo-1584269600519-112d071b35f4?auto=format&fit=crop&w=1400&q=90",
-        description:
-            "A contemporary ceramic bowl featuring a natural stone-inspired aesthetic for modern dining.",
-        specifications: [
-            ["Material", "Ceramic"],
-            ["Finish", "Stone Inspired"],
-            ["Size", "7 Inch"],
-            ["Usage", "Dining / Serving"],
-            ["Customization", "Available"],
-        ],
-    },
+  // Hidden products, or products in a hidden category, are not publicly viewable.
+  if (!product || !product.isActive || !product.category.isActive) return null;
 
-    "heritage-coffee-mug": {
-        name: "Heritage Coffee Mug",
-        category: "Cups & Mugs",
-        code: "AC-CM-001",
-        price: 249,
-        mrp: 329,
-        discount: 24,
-        stock: 65,
-        image:
-            "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=1400&q=90",
-        description:
-            "A comfortable ceramic mug designed for coffee, tea and everyday beverage service.",
-        specifications: [
-            ["Material", "Ceramic"],
-            ["Finish", "Glazed"],
-            ["Capacity", "350 ml"],
-            ["Usage", "Coffee / Tea"],
-            ["Customization", "Available"],
-        ],
-    },
+  return product;
+});
 
-    "modern-serving-collection": {
-        name: "Modern Serving Collection",
-        category: "Serving Ware",
-        code: "AC-SW-001",
-        price: 899,
-        mrp: 1199,
-        discount: 25,
-        stock: 18,
-        image:
-            "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1400&q=90",
-        description:
-            "Contemporary ceramic serving pieces created for elegant presentation and professional food service.",
-        specifications: [
-            ["Material", "Ceramic"],
-            ["Finish", "Contemporary"],
-            ["Pieces", "5 Pieces"],
-            ["Usage", "Serving / Hospitality"],
-            ["Customization", "Available"],
-        ],
-    },
-
-    "hospitality-whiteware": {
-        name: "Hospitality Whiteware",
-        category: "Hotel & Restaurant",
-        code: "AC-HR-001",
-        price: 599,
-        mrp: 799,
-        discount: 25,
-        stock: 120,
-        image:
-            "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=1400&q=90",
-        description:
-            "Professional ceramic tableware solutions designed for hotels, restaurants and large-volume hospitality requirements.",
-        specifications: [
-            ["Material", "Ceramic"],
-            ["Finish", "White"],
-            ["Usage", "Hotel / Restaurant"],
-            ["MOQ", "50 Pieces"],
-            ["Customization", "Available"],
-        ],
-    },
+type PageProps = {
+  params: Promise<{ slug: string }>;
 };
 
-export default async function ProductPage({
-    params,
-}: {
-    params: Promise<{ slug: string }>;
-}) {
-    const { slug } = await params;
-    const product = productData[slug];
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await getProduct(slug);
 
-    if (!product) {
-        return (
-            <main className="product-not-found">
-                <p>PRODUCT NOT FOUND</p>
+  if (!product) {
+    return { title: "Product Not Found" };
+  }
 
-                <h1>
-                    We couldn't find
-                    <br />
-                    this product.
-                </h1>
+  const description =
+    product.description ??
+    `${product.name} - premium ceramic tableware from Aurelia Ceramics.`;
 
-                <Link href="/products" className="primary-btn">
-                    Back to Products <span>→</span>
-                </Link>
-            </main>
-        );
-    }
+  return {
+    title: product.name,
+    description,
+    alternates: { canonical: `/products/${product.slug}` },
+    openGraph: {
+      title: product.name,
+      description,
+      url: `/products/${product.slug}`,
+      images: product.images[0]?.url ? [{ url: product.images[0].url, alt: product.name }] : [],
+    },
+  };
+}
 
-    const whatsappMessage = encodeURIComponent(
-        `Hello, I am interested in ${product.name} (${product.code}). Please share product details and pricing.`
-    );
+export default async function ProductPage({ params }: PageProps) {
+  const { slug } = await params;
+  const product = await getProduct(slug);
 
-    return (
-        <main className="product-detail-page">
-            {/* BREADCRUMB */}
+  if (!product) {
+    notFound();
+  }
 
-            <div className="product-breadcrumb">
-                <div className="product-container">
-                    <Link href="/">Home</Link>
-                    <span>/</span>
-                    <Link href="/products">Products</Link>
-                    <span>/</span>
-                    <strong>{product.name}</strong>
-                </div>
+  const price = Number(product.price);
+  const mrp = product.mrp ? Number(product.mrp) : null;
+  const rating = product.rating ? Number(product.rating) : null;
+  const discount =
+    mrp && mrp > price ? Math.round(((mrp - price) / mrp) * 100) : null;
+
+  const specifications = Array.isArray(product.specifications)
+    ? (product.specifications as [string, string][])
+    : null;
+
+  const mainImage = product.images[0]?.url ?? "/placeholder-product.svg";
+
+  const relatedProducts = await prisma.product.findMany({
+    where: {
+      categoryId: product.categoryId,
+      isActive: true,
+      NOT: { id: product.id },
+    },
+    include: { images: { orderBy: { sortOrder: "asc" }, take: 1 } },
+    take: 4,
+  });
+
+  const whatsappMessage = encodeURIComponent(
+    `Hello, I am interested in ${product.name} (${product.code}). Please share product details and pricing.`
+  );
+
+  // Structured data for rich results. No aggregateRating: only verified
+  // customer reviews should be marked up as ratings.
+  const site = getSiteUrl();
+  const productUrl = `${site}/products/${product.slug}`;
+  const absolute = (url: string) => (url.startsWith("/") ? `${site}${url}` : url);
+  const structuredData = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.name,
+      sku: product.code,
+      description: product.description ?? undefined,
+      category: product.category.name,
+      image: product.images.map((image) => absolute(image.url)),
+      brand: { "@type": "Brand", name: SITE_NAME },
+      offers: {
+        "@type": "Offer",
+        url: productUrl,
+        priceCurrency: "INR",
+        price: price.toFixed(2),
+        itemCondition: "https://schema.org/NewCondition",
+        availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: site },
+        { "@type": "ListItem", position: 2, name: "Products", item: `${site}/products` },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: product.category.name,
+          item: `${site}/products?category=${encodeURIComponent(product.category.name)}`,
+        },
+        { "@type": "ListItem", position: 4, name: product.name, item: productUrl },
+      ],
+    },
+  ];
+
+  return (
+    <main className="product-detail-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
+
+      {/* BREADCRUMB */}
+      <div className="product-breadcrumb">
+        <div className="product-container">
+          <Link href="/">Home</Link>
+          <span>/</span>
+          <Link href="/products">Products</Link>
+          <span>/</span>
+          <strong>{product.name}</strong>
+        </div>
+      </div>
+
+      {/* PRODUCT */}
+      <section className="product-detail">
+        <div className="product-container product-detail-grid">
+          {/* IMAGE */}
+          <div className="product-detail-image">
+            <SmartImage
+              src={mainImage}
+              alt={product.images[0]?.alt ?? product.name}
+              fill
+              priority
+              sizes="(max-width: 900px) 100vw, 50vw"
+            />
+
+            {discount !== null && (
+              <span className="product-discount">{discount}% OFF</span>
+            )}
+          </div>
+
+          {/* INFORMATION */}
+          <div className="product-detail-info">
+            <p className="product-detail-category">{product.category.name}</p>
+
+            <h1>{product.name}</h1>
+
+            {rating !== null && (
+              <div className="product-rating">
+                <span>{"★".repeat(Math.round(rating))}</span>
+                <small>
+                  {rating.toFixed(1)} ({product.reviewCount} reviews)
+                </small>
+              </div>
+            )}
+
+            <div className="product-code-large">
+              PRODUCT CODE <span>{product.code}</span>
             </div>
 
-            {/* PRODUCT */}
+            {/* PRICE */}
+            <div className="product-pricing">
+              <strong>₹{price.toLocaleString("en-IN")}</strong>
 
-            <section className="product-detail">
-                <div className="product-container product-detail-grid">
-                    {/* IMAGE */}
+              {mrp && mrp > price && (
+                <del>₹{mrp.toLocaleString("en-IN")}</del>
+              )}
 
-                    <div className="product-detail-image">
-                        <img src={product.image} alt={product.name} />
+              {discount !== null && <span>{discount}% OFF</span>}
+            </div>
 
-                        <span className="product-discount">
-                            {product.discount}% OFF
-                        </span>
+            <p className="tax-note">Inclusive of applicable taxes</p>
+
+            {/* STOCK */}
+            <div className="stock-status">
+              {product.stock > 0 ? (
+                <>
+                  <span />
+                  {product.stock <= 5
+                    ? `Only ${product.stock} left in stock`
+                    : `In Stock — ${product.stock} units available`}
+                </>
+              ) : (
+                <strong className="out-of-stock">Out of Stock</strong>
+              )}
+            </div>
+
+            <ProductPurchase
+              product={{
+                id: product.id,
+                slug,
+                name: product.name,
+                price,
+                image: mainImage,
+                stock: product.stock,
+              }}
+            />
+
+            {/* B2B */}
+            <div className="b2b-product-box">
+              <div>
+                <span>B2B / BULK BUYING</span>
+                <h3>Buying for your business?</h3>
+                <p>
+                  Get special pricing for bulk quantities, hotels,
+                  restaurants and distributors.
+                </p>
+              </div>
+
+              <Link href="/contact">Request Bulk Quote →</Link>
+            </div>
+
+            {/* DESCRIPTION */}
+            {product.description && (
+              <p className="product-description">{product.description}</p>
+            )}
+
+            {/* SPECIFICATIONS */}
+            {specifications && (
+              <div className="specifications">
+                <h2>Product Information</h2>
+
+                {specifications.map(([label, value]) => (
+                  <div className="spec-row" key={label}>
+                    <span>{label}</span>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* WHATSAPP */}
+            <a
+              href={`https://wa.me/910000000000?text=${whatsappMessage}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="whatsapp-btn product-whatsapp"
+            >
+              Enquire on WhatsApp <span>↗</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* RELATED PRODUCTS */}
+      {relatedProducts.length > 0 && (
+        <section className="catalogue">
+          <div className="catalogue-container">
+            <div className="catalogue-top">
+              <div>
+                <p className="catalogue-label">YOU MAY ALSO LIKE</p>
+                <h2>Related Products</h2>
+              </div>
+            </div>
+
+            <div className="catalogue-grid">
+              {relatedProducts.map((related) => (
+                <article className="catalogue-card" key={related.slug}>
+                  <Link href={`/products/${related.slug}`}>
+                    <div className="catalogue-image">
+                      <SmartImage
+                        src={related.images[0]?.url ?? "/placeholder-product.svg"}
+                        alt={related.name}
+                        fill
+                        sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw"
+                      />
+                      <span className="catalogue-arrow">↗</span>
                     </div>
+                  </Link>
 
-                    {/* INFORMATION */}
-
-                    <div className="product-detail-info">
-                        <p className="product-detail-category">
-                            {product.category}
-                        </p>
-
-                        <h1>{product.name}</h1>
-
-                        <div className="product-rating">
-                            <span>★★★★★</span>
-                            <small>4.8 (24 reviews)</small>
-                        </div>
-
-                        <div className="product-code-large">
-                            PRODUCT CODE <span>{product.code}</span>
-                        </div>
-
-                        {/* PRICE */}
-
-                        <div className="product-pricing">
-                            <strong>₹{product.price.toLocaleString("en-IN")}</strong>
-
-                            <del>₹{product.mrp.toLocaleString("en-IN")}</del>
-
-                            <span>{product.discount}% OFF</span>
-                        </div>
-
-                        <p className="tax-note">
-                            Inclusive of applicable taxes
-                        </p>
-
-                        {/* STOCK */}
-
-                        <div className="stock-status">
-                            <span />
-                            In Stock — {product.stock} units available
-                        </div>
-
-                        <ProductPurchase
-                            product={{
-                                slug,
-                                name: product.name,
-                                price: product.price,
-                                image: product.image,
-                                stock: product.stock,
-                            }}
-                        />
-
-                        {/* B2B */}
-
-                        <div className="b2b-product-box">
-                            <div>
-                                <span>B2B / BULK BUYING</span>
-
-                                <h3>Buying for your business?</h3>
-
-                                <p>
-                                    Get special pricing for bulk quantities, hotels,
-                                    restaurants and distributors.
-                                </p>
-                            </div>
-
-                            <Link href="/contact">
-                                Request Bulk Quote →
-                            </Link>
-                        </div>
-
-                        {/* DESCRIPTION */}
-
-                        <p className="product-description">
-                            {product.description}
-                        </p>
-
-                        {/* SPECIFICATIONS */}
-
-                        <div className="specifications">
-                            <h2>Product Information</h2>
-
-                            {product.specifications.map(
-                                ([label, value]: string[]) => (
-                                    <div className="spec-row" key={label}>
-                                        <span>{label}</span>
-                                        <strong>{value}</strong>
-                                    </div>
-                                )
-                            )}
-                        </div>
-
-                        {/* WHATSAPP */}
-
-                        <a
-                            href={`https://wa.me/910000000000?text=${whatsappMessage}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="whatsapp-btn product-whatsapp"
-                        >
-                            Enquire on WhatsApp <span>↗</span>
-                        </a>
-                    </div>
-                </div>
-            </section>
-
-            {/* PRODUCT STORY */}
-
-            <section className="product-story">
-                <div className="product-container product-story-grid">
-                    <p className="section-label">ABOUT THIS COLLECTION</p>
-
+                  <div className="catalogue-info">
                     <div>
-                        <h2>
-                            Designed with purpose,
-                            <br />
-                            <em>made for real tables.</em>
-                        </h2>
-
-                        <p>
-                            Our ceramic collections are developed with a balance of
-                            appearance, functionality and everyday usability.
-                        </p>
-
-                        <p>
-                            Contact our team for current availability, specifications,
-                            customization options and bulk pricing.
-                        </p>
-
-                        <Link href="/contact" className="text-link">
-                            Talk to our team <span>→</span>
-                        </Link>
+                      <p>{product.category.name}</p>
+                      <h3>{related.name}</h3>
                     </div>
-                </div>
-            </section>
+                    <span className="product-code">{related.code}</span>
+                  </div>
 
-            {/* B2B CTA */}
+                  <Link
+                    href={`/products/${related.slug}`}
+                    className="view-product"
+                  >
+                    View Product <span>→</span>
+                  </Link>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-            <section className="product-b2b">
-                <div className="product-container">
-                    <p className="section-label">B2B & OEM</p>
+      {/* PRODUCT STORY */}
+      <section className="product-story">
+        <div className="product-container product-story-grid">
+          <p className="section-label">ABOUT THIS COLLECTION</p>
 
-                    <h2>
-                        Need this product
-                        <br />
-                        <em>in bulk?</em>
-                    </h2>
+          <div>
+            <h2>
+              Designed with purpose,
+              <br />
+              <em>made for real tables.</em>
+            </h2>
 
-                    <p>
-                        Share your quantity, specifications and delivery requirements
-                        with our team.
-                    </p>
+            <p>
+              Our ceramic collections are developed with a balance of
+              appearance, functionality and everyday usability.
+            </p>
 
-                    <Link href="/contact" className="primary-btn">
-                        Send Bulk Enquiry <span>→</span>
-                    </Link>
-                </div>
-            </section>
-        </main>
-    );
+            <p>
+              Contact our team for current availability, specifications,
+              customization options and bulk pricing.
+            </p>
+
+            <Link href="/contact" className="text-link">
+              Talk to our team <span>→</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* B2B CTA */}
+      <section className="product-b2b">
+        <div className="product-container">
+          <p className="section-label">B2B & OEM</p>
+
+          <h2>
+            Need this product
+            <br />
+            <em>in bulk?</em>
+          </h2>
+
+          <p>
+            Share your quantity, specifications and delivery requirements
+            with our team.
+          </p>
+
+          <Link href="/contact" className="primary-btn">
+            Send Bulk Enquiry <span>→</span>
+          </Link>
+        </div>
+      </section>
+    </main>
+  );
 }

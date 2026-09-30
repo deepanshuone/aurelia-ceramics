@@ -3855,3 +3855,126 @@ h2 {
         grid-template-columns: 1fr;
     }
 }
+/* Spam-bot trap on the contact form: visually hidden, not display:none (bots skip those). */
+.form-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* =========================================
+   POLICY PAGES
+========================================= */
+
+.policy-updated {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.policy-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 48px;
+  padding: 40px 0 90px;
+}
+
+.policy-nav {
+  position: sticky;
+  top: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-self: start;
+}
+
+.policy-nav a {
+  padding: 9px 12px;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.policy-nav a[aria-current="page"] {
+  border-left-color: var(--black);
+  color: var(--black);
+  font-weight: 600;
+}
+
+.policy-body {
+  max-width: 760px;
+  font-size: 16px;
+  line-height: 1.75;
+  color: #333;
+}
+
+.policy-body section + section {
+  margin-top: 34px;
+}
+
+.policy-body h2 {
+  margin: 0 0 12px;
+  font-family: "Playfair Display", serif;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--black);
+}
+
+.policy-body ul {
+  padding-left: 20px;
+}
+
+.policy-body li + li {
+  margin-top: 8px;
+}
+
+.policy-body a {
+  color: var(--brown);
+}
+
+@media (max-width: 800px) {
+  .policy-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .policy-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .policy-nav a {
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+  }
+
+  .policy-nav a[aria-current="page"] {
+    border-bottom-color: var(--black);
+  }
+}
+
+/* 404 / error pages (reuse .product-not-found) */
+.product-not-found > p.not-found-hint {
+  margin: -15px 0 30px;
+  color: var(--muted);
+  font-size: 15px;
+  letter-spacing: normal;
+}
+
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.not-found-actions button.primary-btn {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}

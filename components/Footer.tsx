@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BUSINESS } from "../lib/business";
 
 export default function Footer() {
   return (
@@ -36,14 +37,21 @@ export default function Footer() {
 
         <div>
           <h4>Contact</h4>
-          <p>India</p>
-          <p>hello@aureliaceramics.com</p>
-          <p>+91 00000 00000</p>
+          <p>{BUSINESS.address}</p>
+          <p>
+            <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a>
+          </p>
+          <p>
+            <a href={`tel:${BUSINESS.phone.replace(/\s/g, "")}`}>{BUSINESS.phone}</a>
+          </p>
         </div>
       </div>
 
       <div className="container footer-bottom">
-        <span>© 2026 Aurelia Ceramics. All rights reserved.</span>
+        <span>
+          © {new Date().getFullYear()} {BUSINESS.legalName}. All rights reserved.
+          {BUSINESS.gstin && ` GSTIN: ${BUSINESS.gstin}`}
+        </span>
         <span>Premium Ceramic Tableware</span>
       </div>
     </footer>

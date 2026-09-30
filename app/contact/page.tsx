@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import ContactForm from './ContactForm';
+import { BUSINESS } from '../../lib/business';
 
 export const metadata: Metadata = {
   title: 'Contact Us',
@@ -23,9 +24,14 @@ export default function Contact() {
               custom/OEM requests, send us your details.
             </p>
             <div className="contact-info">
-              <span>hello@aureliaceramics.in</span>
-              <span>+91 00000 00000</span>
-              <span>Morbi, Gujarat · India</span>
+              <span>
+                <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a>
+              </span>
+              <span>
+                <a href={`tel:${BUSINESS.phone.replace(/\s/g, '')}`}>{BUSINESS.phone}</a>
+              </span>
+              <span>{BUSINESS.address}</span>
+              <span>{BUSINESS.supportHours}</span>
             </div>
           </div>
 

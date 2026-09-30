@@ -21,7 +21,7 @@ export default async function AdminDashboard() {
   startOfToday.setHours(0, 0, 0, 0);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [revenue, ordersToday, toFulfil, refundPending, lowStock, customers, recent] =
+  const [revenue, ordersToday, toFulfil, refundPending, lowStock, customers, recent, newEnquiries] =
     await Promise.all([
       prisma.order.aggregate({
         where: { paymentStatus: "PAID", status: { notIn: ["CANCELLED", "REFUNDED"] }, createdAt: { gte: thirtyDaysAgo } },
@@ -56,6 +56,7 @@ export default async function AdminDashboard() {
           shippingName: true,
         },
       }),
+      prisma.enquiry.count({ where: { status: "NEW" } }),
     ]);
 
   const stats = [
@@ -63,6 +64,7 @@ export default async function AdminDashboard() {
     { label: "Orders today", value: String(ordersToday) },
     { label: "To fulfil", value: String(toFulfil), href: "/admin/orders?status=CONFIRMED" },
     { label: "Customers", value: String(customers), href: "/admin/customers" },
+    { label: "New enquiries", value: String(newEnquiries), href: "/admin/enquiries?status=NEW" },
   ];
 
   return (

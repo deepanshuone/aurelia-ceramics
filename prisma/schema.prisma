@@ -303,3 +303,25 @@ model Wishlist {
   @@unique([customerId, productId])
   @@index([customerId])
 }
+
+enum EnquiryStatus {
+  NEW
+  IN_PROGRESS
+  CLOSED
+}
+
+// Messages from the public contact form, handled in /admin/enquiries.
+model Enquiry {
+  id          String        @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  requirement String
+  message     String
+  status      EnquiryStatus @default(NEW)
+  adminNote   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, createdAt])
+}

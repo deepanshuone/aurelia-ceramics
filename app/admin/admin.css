@@ -600,3 +600,56 @@ a.admin-stat:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* Enquiries */
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.admin-tabs a {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--black);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.admin-tabs a.active {
+  border-color: var(--black);
+  background: var(--black);
+  color: var(--white);
+}
+
+.admin-enquiry .admin-panel-head h2 {
+  margin: 0 0 6px;
+}
+
+.admin-enquiry .admin-panel-head small {
+  color: var(--muted);
+}
+
+.admin-enquiry-message {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: #f7f6f3;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.admin-enquiry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-enquiry-actions .admin-form {
+  flex: 1 1 420px;
+}

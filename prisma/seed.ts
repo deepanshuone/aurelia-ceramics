@@ -13,8 +13,6 @@ const products = [
     price: 2499,
     mrp: 2999,
     stock: 25,
-    rating: 4.8,
-    reviewCount: 24,
     isFeatured: true,
     description:
       "A timeless ceramic dinner collection designed for elegant everyday dining, hospitality spaces and premium table settings.",
@@ -36,8 +34,6 @@ const products = [
     price: 399,
     mrp: 499,
     stock: 50,
-    rating: 4.7,
-    reviewCount: 41,
     isFeatured: true,
     description:
       "A versatile ceramic plate with a clean profile, designed for restaurants, hotels and modern dining environments.",
@@ -59,8 +55,6 @@ const products = [
     price: 449,
     mrp: 599,
     stock: 40,
-    rating: 4.6,
-    reviewCount: 18,
     isFeatured: true,
     description:
       "A contemporary ceramic bowl featuring a natural stone-inspired aesthetic for modern dining.",
@@ -82,8 +76,6 @@ const products = [
     price: 349,
     mrp: 449,
     stock: 60,
-    rating: 4.8,
-    reviewCount: 63,
     isFeatured: false,
     description:
       "A comfortable ceramic mug designed for coffee, tea and everyday beverage service.",
@@ -105,8 +97,6 @@ const products = [
     price: 1299,
     mrp: 1599,
     stock: 18,
-    rating: 4.7,
-    reviewCount: 12,
     isFeatured: false,
     description:
       "Contemporary ceramic serving pieces created for elegant presentation and professional food service.",
@@ -128,8 +118,6 @@ const products = [
     price: 899,
     mrp: 1099,
     stock: 100,
-    rating: 4.9,
-    reviewCount: 37,
     isFeatured: false,
     description:
       "Durable ceramic tableware solutions designed for hotels, restaurants and large-volume hospitality requirements.",
@@ -168,6 +156,9 @@ function categorySlug(name: string) {
     .replace(/ /g, "-");
 }
 
+// NOTE: this seed is the catalogue definition. Re-running it UPDATES existing
+// products to these values — including price and stock — so on a live store,
+// manage products in /admin instead of re-seeding.
 async function main() {
   for (const product of allProducts) {
     const category = await prisma.category.upsert({
@@ -192,8 +183,9 @@ async function main() {
         price: product.price,
         mrp: product.mrp,
         stock: product.stock,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
+        // Ratings come only from real reviews; seed data starts with none.
+        rating: product.rating ?? null,
+        reviewCount: product.reviewCount ?? 0,
         isFeatured: product.isFeatured,
         description: product.description,
         specifications: product.specifications,
@@ -206,8 +198,9 @@ async function main() {
         price: product.price,
         mrp: product.mrp,
         stock: product.stock,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
+        // Ratings come only from real reviews; seed data starts with none.
+        rating: product.rating ?? null,
+        reviewCount: product.reviewCount ?? 0,
         isFeatured: product.isFeatured,
         description: product.description,
         specifications: product.specifications,

@@ -1,6 +1,8 @@
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
+  // Vercel functions run on Amazon Linux (rhel-openssl-3.0.x); always generate that engine too.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

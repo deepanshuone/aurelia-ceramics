@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { auth } from "../../../auth";
 import {
@@ -8,6 +8,8 @@ import {
   shippingSchema,
 } from "../../../lib/checkout-server";
 import { rateLimit } from "../../../lib/rate-limit";
+import { prisma } from "../../../lib/prisma";
+import { sendOrderConfirmationEmails } from "../../../lib/order-emails";
 
 const checkoutSchema = z.object({
   shipping: shippingSchema,
@@ -45,6 +47,15 @@ export async function POST(request: Request) {
 
   try {
     const order = await placeOrder({ customerId, ...parsed.data });
+
+    // COD orders are confirmed straight away; email after the response is sent.
+    if (parsed.data.paymentMethod === "COD") {
+      after(async () => {
+        const row = await prisma.order.findUnique({ where: { orderId: order.orderId }, select: { id: true } });
+        if (row) await sendOrderConfirmationEmails(row.id);
+      });
+    }
+
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
     if (error instanceof CheckoutError) {

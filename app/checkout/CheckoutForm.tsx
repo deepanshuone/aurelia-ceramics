@@ -38,8 +38,12 @@ type CheckoutFormProps = {
 
 const NEW_ADDRESS = "new";
 
+// ₹1,804.50 rather than ₹1,804.5 when there are paise.
 const rupees = (value: number) =>
-    `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+    `₹${value.toLocaleString("en-IN", {
+        minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+        maximumFractionDigits: 2,
+    })}`;
 
 async function postJson<T>(url: string, body: unknown) {
     const response = await fetch(url, {

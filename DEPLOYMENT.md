@@ -33,6 +33,18 @@ Edit **`lib/business.ts`** — it feeds the footer, contact page and all four po
 
 Without the Razorpay keys the shop still works — checkout offers **Cash on Delivery** only.
 
+**Order emails** (confirmation to the customer + alert to you) need one of:
+
+| Variable | Value |
+|---|---|
+| `SMTP_HOST` / `SMTP_PORT` | `smtp.gmail.com` / `465` |
+| `SMTP_USER` | your Gmail address |
+| `SMTP_PASS` | a Google **App Password** (myaccount.google.com/apppasswords) |
+| `EMAIL_FROM` | optional, e.g. `Aurelia Ceramics <yourshop@gmail.com>` |
+| `ORDER_ALERT_EMAIL` | where new-order alerts go |
+
+or `RESEND_API_KEY` (Resend needs a verified domain). Without either, orders still work — emails are just skipped.
+
 ## 3. Razorpay
 
 - [ ] Dashboard → Webhooks → add `https://<your-domain>/api/payments/razorpay/webhook`

@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import {
   PaymentError,
   markPaymentCaptured,
   markPaymentFailed,
   verifyWebhookSignature,
 } from "../../../../../lib/payments";
+import { sendOrderConfirmationEmails } from "../../../../../lib/order-emails";
 
 type PaymentEntity = {
   id: string;
@@ -51,12 +52,15 @@ export async function POST(request: Request) {
   switch (event.event) {
     case "payment.captured":
     case "order.paid":
-      await markPaymentCaptured({
-        razorpayOrderId: payment.order_id,
-        razorpayPaymentId: payment.id,
-        amountPaise: payment.amount,
-        rawWebhookPayload: event,
-      });
+      {
+        const captured = await markPaymentCaptured({
+          razorpayOrderId: payment.order_id,
+          razorpayPaymentId: payment.id,
+          amountPaise: payment.amount,
+          rawWebhookPayload: event,
+        });
+        if (captured.found) after(() => sendOrderConfirmationEmails(captured.orderRowId).then(() => undefined));
+      }
       break;
     case "payment.failed":
       await markPaymentFailed({

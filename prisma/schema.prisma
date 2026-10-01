@@ -216,6 +216,9 @@ model Order {
   cancelReason    String?
   refundedAmount  Decimal     @db.Decimal(10, 2) @default(0)
 
+  // Set once the customer's confirmation email has been sent (prevents duplicates).
+  confirmationEmailSentAt DateTime?
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 

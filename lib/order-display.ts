@@ -26,8 +26,11 @@ export const ORDER_PROGRESS: OrderStatus[] = [
   "DELIVERED",
 ];
 
+// ₹1,895 for whole rupees, ₹1,804.50 (never ₹1,804.5) when there are paise.
 export function formatRupees(value: number | { toString(): string }) {
-  return `₹${Number(value).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+  const amount = Number(value);
+  const digits = Number.isInteger(amount) ? 0 : 2;
+  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: digits, maximumFractionDigits: 2 })}`;
 }
 
 export function formatOrderDate(date: Date) {

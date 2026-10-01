@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { auth } from "../../../../../auth";
 import { prisma } from "../../../../../lib/prisma";
@@ -7,6 +7,7 @@ import {
   markPaymentCaptured,
   verifyCheckoutSignature,
 } from "../../../../../lib/payments";
+import { sendOrderConfirmationEmails } from "../../../../../lib/order-emails";
 
 const schema = z.object({
   razorpay_order_id: z.string().min(1).max(100),
@@ -48,11 +49,12 @@ export async function POST(request: Request) {
     throw error;
   }
 
-  await markPaymentCaptured({
+  const captured = await markPaymentCaptured({
     razorpayOrderId: razorpay_order_id,
     razorpayPaymentId: razorpay_payment_id,
     signature: razorpay_signature,
   });
+  if (captured.found) after(() => sendOrderConfirmationEmails(captured.orderRowId).then(() => undefined));
 
   return NextResponse.json({ orderId: payment.order.orderId });
 }

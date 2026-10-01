@@ -3,6 +3,10 @@ import './globals.css';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Providers from '../components/Providers';
+import AnnouncementBar from '../components/AnnouncementBar';
+import WhatsAppFloat from '../components/WhatsAppFloat';
+import { whatsappLink } from '../lib/business';
+import { getNavCategories } from '../lib/nav';
 import { SITE_DESCRIPTION, SITE_NAME, getSiteUrl } from '../lib/site';
 
 export const metadata: Metadata = {
@@ -25,14 +29,21 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body>
         <Providers>
-          <Header />
-          {children}
+          <a href="#main-content" className="skip-link">
+            Skip to content
+          </a>
+          <AnnouncementBar />
+          <Header categories={await getNavCategories()} />
+          <div id="main-content" tabIndex={-1}>
+            {children}
+          </div>
           <Footer />
+          <WhatsAppFloat href={whatsappLink('Hello, I have a question about your ceramic products.')} />
         </Providers>
       </body>
     </html>

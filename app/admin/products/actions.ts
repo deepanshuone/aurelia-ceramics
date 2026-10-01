@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
@@ -82,6 +82,7 @@ function parseImages(text: string) {
 }
 
 function refreshStorefront(...slugs: (string | undefined)[]) {
+  revalidateTag("nav-categories");
   revalidatePath("/");
   revalidatePath("/products");
   for (const slug of slugs) if (slug) revalidatePath(`/products/${slug}`);

@@ -30,6 +30,8 @@ export default function ProductFilters({ categories, current }: Props) {
   const searchParams = useSearchParams();
 
   const [searchInput, setSearchInput] = useState(current.search);
+  // Phones: search/price/sort fold behind a "Filters" button to keep products above the fold.
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [minPrice, setMinPrice] = useState(current.minPrice);
   const [maxPrice, setMaxPrice] = useState(current.maxPrice);
 
@@ -41,6 +43,8 @@ export default function ProductFilters({ categories, current }: Props) {
 
   function updateParams(updates: Record<string, string | null>) {
     const next = new URLSearchParams(searchParams.toString());
+    // Changing a filter or sort should always start again from page 1.
+    next.delete("page");
 
     for (const [key, value] of Object.entries(updates)) {
       if (value === null || value === "") next.delete(key);
@@ -114,7 +118,18 @@ export default function ProductFilters({ categories, current }: Props) {
         ))}
       </div>
 
-      <div className="filters-row">
+      <button
+        type="button"
+        className="filters-toggle"
+        aria-expanded={filtersOpen}
+        aria-controls="filters-row"
+        onClick={() => setFiltersOpen((open) => !open)}
+      >
+        {filtersOpen ? "Hide filters" : "Search, filter & sort"}
+        {hasActiveFilters && !filtersOpen && <span className="filters-toggle-dot" aria-label="filters active" />}
+      </button>
+
+      <div id="filters-row" className={`filters-row${filtersOpen ? " open" : ""}`}>
         <div className="filter-search">
           <input
             type="search"

@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/admin/customers", label: "Customers" },
   { href: "/admin/coupons", label: "Coupons" },
   { href: "/admin/enquiries", label: "Enquiries" },
+  { href: "/admin/reviews", label: "Reviews" },
 ];
 
 export default function AdminNav() {

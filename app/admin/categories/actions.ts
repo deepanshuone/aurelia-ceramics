@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
@@ -26,6 +26,7 @@ const categorySchema = z.object({
 });
 
 function refresh() {
+  revalidateTag("nav-categories");
   revalidatePath("/");
   revalidatePath("/products");
   revalidatePath("/admin/categories");

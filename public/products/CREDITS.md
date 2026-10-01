@@ -99,3 +99,63 @@ image rights stay auditable. Replace these with your own product photography whe
 | `wall-mount-planter-pair.jpg` | Potted Plants Planter | unknown | [rawpixel](https://www.rawpixel.com/image/5968737/potted-plants-planter) |
 | `white-fluted-vase.jpg` | Flower Vase | Matt Bango | [stocksnap](https://stocksnap.io/photo/flower-vase-TIKIL6JEJP) |
 | `white-hanging-planter.jpg` | A white hanging planter filled with vibrant pink petunia flowers is suspended from a rustic brick wall adorned with traditional carvings. | shirishpoudel07 | [wordpress](https://wordpress.org/photos/photo/1736801089/) |
+| `black-clay-handi.jpg` | A close view of a handmade black earthen pot with natural texture and soft lighting. The background blur keeps focus on the pot. Captured in Andheri, Mumbai. | Bigul Malayi | [wordpress](https://wordpress.org/photos/photo/24069ef912/) |
+| `blue-onion-plate.jpg` | Dessert plate | themet | [rawpixel](https://www.rawpixel.com/image/8132159/dessert-plate) |
+| `blue-willow-plate.jpg` | Dessert plate | unknown | [rawpixel](https://www.rawpixel.com/image/8900434/dessert-plate) |
+| `celadon-crackle-bud-vase.jpg` | A green ceramic vase with a crackled finish is positioned on a decorative glass plate. | Uttkrista Chhetri | [wordpress](https://wordpress.org/photos/photo/81869c7eca/) |
+| `celadon-dhoop-bowl.jpg` | Tripod Incense Holder Floral Design | artinstitutechicago | [rawpixel](https://www.rawpixel.com/image/8947432/tripod-incense-holder-with-floral-design) |
+| `celadon-matcha-bowl.jpg` | Bowl with Central Floret | artinstitutechicago | [rawpixel](https://www.rawpixel.com/image/9011197/bowl-with-central-floret) |
+| `celadon-moon-jar.jpg` | Lotus Bud Jar: Jun ware | clevelandart | [rawpixel](https://www.rawpixel.com/image/9632110/lotus-bud-jar-jun-ware) |
+| `celadon-trinket-box.jpg` | Circular Box: Qingbai Ware | unknown | [clevelandmuseum](https://clevelandart.org/art/1972.256) |
+| `ceramic-honey-pot.jpg` | Honey Stick Dipped in Jar of Honey | Image Catalog | [flickr](https://www.flickr.com/photos/132795455@N08/18692132011) |
+| `chutney-dip-platter.jpg` | Tara, Feta and Red Pepper and Melinzano dip at Ouzeri | roland | [flickr](https://www.flickr.com/photos/35034347371@N01/12848031) |
+| `classic-ramen-bowl.jpg` | Free Japanese ramen bowl image | unknown | [rawpixel](https://www.rawpixel.com/image/5925771/photo-image-public-domain-food-free) |
+| `clay-tumbler-set.jpg` | Western Jin Tea Cups | Gary Lee Todd, Ph.D. | [flickr](https://www.flickr.com/photos/101561334@N08/13136674213) |
+| `diya-thali-set.jpg` | Glowing diyas, shimmering hopes, and a festival of light—may this Diwali bring warmth, joy, and prosperity into every heart | Kapil Arya | [wordpress](https://wordpress.org/photos/photo/9867cd4106/) |
+| `emerald-candle-stand-pair.jpg` | Tang Sancai Porcelain Candle Holders | Gary Lee Todd, Ph.D. | [flickr](https://www.flickr.com/photos/101561334@N08/9912433023) |
+| `everyday-rice-bowl.jpg` | Free steamed rice bowl, sesame | unknown | [rawpixel](https://www.rawpixel.com/image/5904594/photo-image-public-domain-sunlight-summer) |
+| `green-glazed-matka.jpg` | Old moss-covered clay cooking pot balanced on a stone pillar beside a water pipe, with pink flowers blooming softly in the background. | appealdahal | [wordpress](https://wordpress.org/photos/photo/9316a256d7/) |
+| `green-leaf-sgraffito-plate.jpg` | porcelaneous stoneware underglaze brown flower | unknown | [rawpixel](https://www.rawpixel.com/image/7655608/photo-image-flower-vintage-art) |
+| `haathi-cup-saucer.jpg` | Coffee Mug | Matt Bango | [stocksnap](https://stocksnap.io/photo/coffee-mug-JCEKFWH9O7) |
+| `hand-painted-festive-diya.jpg` | A lit terracotta diya with painted designs on a colorful rangoli background, reflecting the celebration of Diwali an Indian festival. | Ronak Hapaliya | [wordpress](https://wordpress.org/photos/photo/146616d91c/) |
+| `hands-planter.jpg` | Hand flower pot | msakhawatali | [flickr](https://www.flickr.com/photos/168707754@N04/45690386554) |
+| `heritage-floral-jardiniere.jpg` | Jardiniere with Birds on Flowering Branches | unknown | [clevelandmuseum](https://clevelandart.org/art/1942.702.1) |
+| `heritage-lidded-serving-dish.jpg` | Covered Platter-56.21.130aplatter, ceramic, blid, enamelled | unknown | [rawpixel](https://www.rawpixel.com/image/7464318/image-cat-birthday-cake-art) |
+| `hexagon-art-deco-plate.jpg` | Schotel, behorende bij een theeservies | rijksmuseum | [rawpixel](https://www.rawpixel.com/image/13748868/photo-image-art-pattern-black-background) |
+| `hiran-medallion-plate.jpg` | Plate with stag resting | themet | [rawpixel](https://www.rawpixel.com/image/12838296/plate-with-stag-resting) |
+| `jaali-rim-plate.jpg` | Dessert plate | themet | [rawpixel](https://www.rawpixel.com/image/8123220/dessert-plate) |
+| `koi-gaiwan.jpg` | tea cup | Penrox Ko | [flickr](https://www.flickr.com/photos/66915263@N03/7021949683) |
+| `lace-fruit-basket.jpg` | Plate / 1740–60 | museado | [flickr](https://www.flickr.com/photos/200781279@N05/53902624649) |
+| `lal-gulab-bowl.jpg` | Bowl with Flowering Plants | unknown | [clevelandmuseum](https://clevelandart.org/art/1939.258) |
+| `latte-art-cup-saucer.jpg` | Cappuccino with Whipped Cream in White Cup | Image Catalog | [flickr](https://www.flickr.com/photos/132795455@N08/19265315782) |
+| `lattice-rim-dessert-plate.jpg` | Nine dessert plates | themet | [rawpixel](https://www.rawpixel.com/image/8129995/nine-dessert-plates) |
+| `lilac-scallop-planter.jpg` | NMCP NURSES CELEBRATE EARTH DAY 2022 | NavyMedicine | [flickr](https://www.flickr.com/photos/61270229@N05/52036823392) |
+| `lotus-tealight-holder.jpg` | Lotus candle holders | bethcoll | [flickr](https://www.flickr.com/photos/27463656@N00/40160858853) |
+| `midnight-latte-cup.jpg` | Cappuccino Breakfast | Oriana Ortiz | [stocksnap](https://stocksnap.io/photo/cappuccino-breakfast-15MSMABWGU) |
+| `mini-dip-bowl-set.jpg` | 20120905-FNS-LSC-0156 | USDAgov | [flickr](https://www.flickr.com/photos/41284017@N08/7940099666) |
+| `mint-cake-stand.jpg` | cake stand cream cake covered | unknown | [rawpixel](https://www.rawpixel.com/image/3299193/free-photo-image-cake-torte-wedding) |
+| `mustard-vase.jpg` | A bright yellow ceramic vase filled with dried flowers in shades of orange, yellow, green, and purple sits on a light surface near a window with a sheer curtain. | Olesja Debrova | [wordpress](https://wordpress.org/photos/photo/78169383cd/) |
+| `navy-floral-oval-dish.jpg` | Basket Worcester Porcelain Factory (Manufacturer) | artinstitutechicago | [rawpixel](https://www.rawpixel.com/image/9030077/basket-worcester-porcelain-factory-manufacturer) |
+| `nilgiri-brushstroke-mug.jpg` | A handmade ceramic coffee mug with a textured green and white design sits on a small matching plate. | Alina Kakshapati | [wordpress](https://wordpress.org/photos/photo/72668c9036/) |
+| `olive-glaze-tea-bowl.jpg` | Plate | museado | [flickr](https://www.flickr.com/photos/200781279@N05/53911402203) |
+| `painted-clay-diya-pair.jpg` | Indian clay diya for Diwali. | Hemant Tejwani | [wordpress](https://wordpress.org/photos/photo/61165c4ad4/) |
+| `painted-tea-bowl-set.jpg` | Japanese Ceramic Tea Cups, Edo, 1824 (Bunsei 7) | Gary Lee Todd, Ph.D. | [flickr](https://www.flickr.com/photos/101561334@N08/26501499692) |
+| `parrot-garden-plate.jpg` | Pair of Plates | lacma | [rawpixel](https://www.rawpixel.com/image/11800930/pair-plates) |
+| `pink-peony-gold-plate.jpg` | Dessert Plate Prince Iusupov Porcelain | artinstitutechicago | [rawpixel](https://www.rawpixel.com/image/8931520/dessert-plate-prince-iusupov-porcelain-factory-manufacturer) |
+| `plum-matte-mug.jpg` | Black coffee mug white table | unknown | [rawpixel](https://www.rawpixel.com/image/6038747/photo-image-public-domain-coffee-table) |
+| `pour-over-stoneware-mug.jpg` | Free milk pouring coffee mug | unknown | [rawpixel](https://www.rawpixel.com/image/5928336/photo-image-public-domain-gold-wooden) |
+| `red-cereal-bowl.jpg` | Free healthy breakfast bowl closeup | unknown | [rawpixel](https://www.rawpixel.com/image/5921299/photo-image-public-domain-fruit-red) |
+| `rosso-cappuccino-cup.jpg` | Coffee Mug | FreePhotos | [stocksnap](https://stocksnap.io/photo/coffee-mug-NVKXLIKJ25) |
+| `royal-blue-flower-pot.jpg` | Blue flower pot | tucsonphoto | [flickr](https://www.flickr.com/photos/138584174@N06/34365771586) |
+| `sky-glaze-pasta-plate.jpg` | Elegant blue ceramic plate design | artinstitutechicago | [rawpixel](https://www.rawpixel.com/image/8952424/dish) |
+| `slim-white-stem-vase.jpg` | A close-up, still-life photograph of a delicate bunch of off-white dried baby’s breath flowers arranged in a minimalist ceramic vase. The cream-colored vase features a single terracotta brown stripe and stands against a deep matte green wall. | Tilak Bahadur Karki | [wordpress](https://wordpress.org/photos/photo/4016a0c06d/) |
+| `speckled-mini-pot.jpg` | Dried flowers vase, home decor | unknown | [rawpixel](https://www.rawpixel.com/image/6026552/photo-image-background-flower-public-domain) |
+| `stoneware-noodle-bowl.jpg` | A bowl of ramen featuring yellow noodles in a rich orange broth. | Manjil Aryal | [wordpress](https://wordpress.org/photos/photo/48696f84f4/) |
+| `tangerine-glaze-pot.jpg` | Yellow flower pot in Santorini | Wallboat | [flickr](https://www.flickr.com/photos/151415985@N06/36679165911) |
+| `teal-rim-cappuccino-cup.jpg` | Coffee Cappuccino | Hello Goodbye | [stocksnap](https://stocksnap.io/photo/coffee-cappuccino-UXO5P8KFS5) |
+| `terracotta-diya-set.jpg` | Diwali Diya - Small Bowl-like Lamps Made of Mud | onejeet | [flickr](https://www.flickr.com/photos/143413219@N06/31973396168) |
+| `terracotta-water-matka.jpg` | A hand holding a small traditional clay pot outdoors on a sunny day. The brown earthen pot has a rounded shape and rustic texture, with soil and green plants visible in the background. | appealdahal | [wordpress](https://wordpress.org/photos/photo/4076a00813/) |
+| `turquoise-relief-bowl.jpg` | Bowl with Lotus Bud Decoration | unknown | [clevelandmuseum](https://clevelandart.org/art/1985.183) |
+| `white-coupe-plate.jpg` | Plate | lacma | [rawpixel](https://www.rawpixel.com/image/11800346/plate) |
+| `white-fruit-bowl.jpg` | Fruit Bowl | Suzy Hazelwood | [stocksnap](https://stocksnap.io/photo/fruit-bowl-4MUZH41WMD) |
+| `zigzag-monochrome-mug.jpg` | coffee-mug-tea-sugar | pixellaphoto | [flickr](https://www.flickr.com/photos/137643065@N06/23697944933) |

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SmartImage from "./SmartImage";
+import QuickAddButton from "./QuickAddButton";
 
 type Product = {
   id: string;
@@ -27,8 +28,15 @@ export default function ProductCatalogue({ products }: Props) {
             <div className="catalogue-image">
               <SmartImage src={product.image} alt={product.name} fill sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw" />
 
-              {product.stock <= 0 && (
+              {product.stock <= 0 ? (
                 <span className="catalogue-stock-badge">Out of Stock</span>
+              ) : (
+                product.mrp &&
+                product.mrp > product.price && (
+                  <span className="catalogue-discount-badge">
+                    {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% OFF
+                  </span>
+                )
               )}
 
               <span className="catalogue-arrow">↗</span>
@@ -51,9 +59,12 @@ export default function ProductCatalogue({ products }: Props) {
             )}
           </div>
 
-          <Link href={`/products/${product.slug}`} className="view-product">
-            View Product <span>→</span>
-          </Link>
+          <div className="catalogue-actions">
+            <QuickAddButton slug={product.slug} name={product.name} inStock={product.stock > 0} />
+            <Link href={`/products/${product.slug}`} className="view-product">
+              Details <span>→</span>
+            </Link>
+          </div>
         </article>
       ))}
     </div>

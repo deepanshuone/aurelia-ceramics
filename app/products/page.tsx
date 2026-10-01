@@ -3,6 +3,9 @@ import { prisma } from "../../lib/prisma";
 import { Prisma } from "../../lib/generated/prisma/client";
 import ProductCatalogue from "../../components/ProductCatalogue";
 import ProductFilters from "../../components/ProductFilters";
+import CataloguePagination from "../../components/CataloguePagination";
+
+const PAGE_SIZE = 24;
 
 type SearchParams = {
   search?: string;
@@ -11,6 +14,7 @@ type SearchParams = {
   maxPrice?: string;
   inStock?: string;
   sort?: string;
+  page?: string;
 };
 
 export async function generateMetadata({
@@ -43,7 +47,8 @@ const SORT_OPTIONS: Record<string, Prisma.ProductOrderByWithRelationInput> = {
   newest: { createdAt: "desc" },
   "price-asc": { price: "asc" },
   "price-desc": { price: "desc" },
-  popularity: { rating: "desc" },
+  // Best sellers first (how many times a product has been ordered).
+  popularity: { orderItems: { _count: "desc" } },
 };
 
 export default async function ProductsPage({
@@ -89,6 +94,11 @@ export default async function ProductsPage({
     where.stock = { gt: 0 };
   }
 
+  const totalProducts = await prisma.product.count({ where });
+  const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
+  const requestedPage = Number.parseInt(params.page ?? "1", 10);
+  const page = Number.isFinite(requestedPage) ? Math.min(Math.max(requestedPage, 1), totalPages) : 1;
+
   const [dbProducts, dbCategories] = await Promise.all([
     prisma.product.findMany({
       where,
@@ -96,7 +106,10 @@ export default async function ProductsPage({
         category: true,
         images: { orderBy: { sortOrder: "asc" }, take: 1 },
       },
-      orderBy: SORT_OPTIONS[sort],
+      // id as a tie-breaker keeps page boundaries stable.
+      orderBy: [SORT_OPTIONS[sort], { id: "asc" }],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
     prisma.category.findMany({
       where: { isActive: true },
@@ -153,7 +166,7 @@ export default async function ProductsPage({
             </div>
 
             <p className="product-count">
-              {products.length} {products.length === 1 ? "Product" : "Products"}
+              {totalProducts} {totalProducts === 1 ? "Product" : "Products"}
             </p>
           </div>
 
@@ -179,7 +192,21 @@ export default async function ProductsPage({
               <span>Try a different search term or clear your filters.</span>
             </div>
           ) : (
-            <ProductCatalogue products={products} />
+            <>
+              <ProductCatalogue products={products} />
+              <CataloguePagination
+                page={page}
+                totalPages={totalPages}
+                params={{
+                  search: search || undefined,
+                  category: category || undefined,
+                  minPrice: params.minPrice,
+                  maxPrice: params.maxPrice,
+                  inStock: inStock ? "1" : undefined,
+                  sort: sort === "newest" ? undefined : sort,
+                }}
+              />
+            </>
           )}
         </div>
       </section>

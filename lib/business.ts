@@ -13,6 +13,11 @@ export const BUSINESS = {
   legalName: "Aurelia Ceramics",
   email: "hello@aureliaceramics.in", // PLACEHOLDER — use an inbox you actually monitor
   phone: "+91 00000 00000", // PLACEHOLDER
+  /**
+   * WhatsApp Business number: country code + number, digits only
+   * (e.g. "919876543210"). Leave empty to hide every WhatsApp button.
+   */
+  whatsapp: "", // PLACEHOLDER
   /** Registered / pickup address. PLACEHOLDER */
   address: "Morbi, Gujarat, India",
   /** GSTIN, if registered. Leave empty to hide it. PLACEHOLDER */
@@ -24,6 +29,13 @@ export const BUSINESS = {
   /** Date the policy pages were last reviewed (shown on each policy). */
   policiesUpdated: "30 September 2026",
 } as const;
+
+/** wa.me link with a pre-filled message, or null when no WhatsApp number is set. */
+export function whatsappLink(message: string) {
+  const number = BUSINESS.whatsapp.replace(/\D/g, "");
+  if (number.length < 10) return null;
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+}
 
 // Commercial terms the policy pages describe. Delivery charges come straight
 // from the cart code; the online-payment window is PAYMENT_WINDOW_MINUTES in

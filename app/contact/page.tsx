@@ -7,7 +7,12 @@ export const metadata: Metadata = {
   description: 'Get in touch with Aurelia Ceramics for product enquiries, wholesale requirements, hotel projects or custom/OEM requests.',
 };
 
-export default function Contact() {
+export default async function Contact({
+  searchParams,
+}: {
+  searchParams: Promise<{ requirement?: string; product?: string }>;
+}) {
+  const { requirement, product } = await searchParams;
   return (
     <main>
       <section className="contact">
@@ -35,7 +40,14 @@ export default function Contact() {
             </div>
           </div>
 
-          <ContactForm />
+          <ContactForm
+            initialRequirement={requirement}
+            initialMessage={
+              product
+                ? [`I'd like a quote for: ${product.slice(0, 150)}`, "Quantity: ", "Delivery city: "].join("\n")
+                : undefined
+            }
+          />
         </div>
       </section>
     </main>

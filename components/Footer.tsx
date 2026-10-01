@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { BUSINESS } from "../lib/business";
+import { getNavCategories } from "../lib/nav";
 
-export default function Footer() {
+export default async function Footer() {
+  // Largest categories first, so the footer highlights the main ranges.
+  const topCategories = (await getNavCategories()).sort((a, b) => b.count - a.count).slice(0, 6);
+
   return (
     <footer className="footer">
       <div className="container footer-grid">
@@ -18,6 +22,16 @@ export default function Footer() {
             Premium ceramic crockery for modern homes and professional
             hospitality.
           </p>
+        </div>
+
+        <div>
+          <h4>Shop</h4>
+          {topCategories.map((category) => (
+            <Link key={category.name} href={`/products?category=${encodeURIComponent(category.name)}`}>
+              {category.name}
+            </Link>
+          ))}
+          <Link href="/products">All products →</Link>
         </div>
 
         <div>

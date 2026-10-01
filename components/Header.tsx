@@ -7,11 +7,13 @@ import { useSession } from "next-auth/react";
 import { useCart } from "./CartProvider";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/products", label: "Products" },
   { href: "/about", label: "About Us" },
   { href: "/contact", label: "Contact" },
 ];
+
+type NavCategory = { name: string; count: number };
+
+const categoryHref = (name: string) => `/products?category=${encodeURIComponent(name)}`;
 
 type Suggestion = {
   name: string;
@@ -199,7 +201,7 @@ function SearchBox({
   );
 }
 
-export default function Header() {
+export default function Header({ categories = [] }: { categories?: NavCategory[] }) {
   const router = useRouter();
   const { data: session, status } = useSession();
 
@@ -232,7 +234,32 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className="site-nav">
+        <nav className="site-nav" aria-label="Main">
+          <Link href="/">Home</Link>
+
+          {/* Shop menu: opens on hover and on keyboard focus */}
+          <div className="nav-shop">
+            <Link href="/products" className="nav-shop-trigger" aria-haspopup="true">
+              Shop <span aria-hidden="true">▾</span>
+            </Link>
+            <div className="nav-shop-panel">
+              <p>SHOP BY CATEGORY</p>
+              <ul>
+                {categories.map((category) => (
+                  <li key={category.name}>
+                    <Link href={categoryHref(category.name)}>
+                      {category.name}
+                      <small>{category.count}</small>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/products" className="nav-shop-all">
+                View all products →
+              </Link>
+            </div>
+          </div>
+
           {NAV_LINKS.map((link) => (
             <Link key={link.href} href={link.href}>
               {link.label}
@@ -301,6 +328,22 @@ export default function Header() {
 
       {menuOpen && (
         <div className="mobile-menu">
+          <Link href="/" onClick={() => setMenuOpen(false)}>
+            Home
+          </Link>
+          <Link href="/products" onClick={() => setMenuOpen(false)}>
+            All Products
+          </Link>
+          {categories.length > 0 && (
+            <div className="mobile-menu-categories">
+              <p>SHOP BY CATEGORY</p>
+              {categories.map((category) => (
+                <Link key={category.name} href={categoryHref(category.name)} onClick={() => setMenuOpen(false)}>
+                  {category.name}
+                </Link>
+              ))}
+            </div>
+          )}
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}

@@ -5,7 +5,13 @@ import { notFound } from "next/navigation";
 import { prisma } from "../../../lib/prisma";
 import ProductPurchase from "./ProductPurchase";
 import SmartImage from "../../../components/SmartImage";
+import ProductCatalogue from "../../../components/ProductCatalogue";
+import ReviewForm from "./ReviewForm";
+import { auth } from "../../../auth";
+import { hasReceivedProduct, reviewerDisplayName } from "../../../lib/reviews";
+import { formatOrderDate } from "../../../lib/order-display";
 import { SITE_NAME, getSiteUrl, jsonLd } from "../../../lib/site";
+import { POLICY, whatsappLink } from "../../../lib/business";
 
 // cache(): generateMetadata and the page share one query per request.
 const getProduct = cache(async (slug: string) => {
@@ -82,12 +88,38 @@ export default async function ProductPage({ params }: PageProps) {
       NOT: { id: product.id },
     },
     include: { images: { orderBy: { sortOrder: "asc" }, take: 1 } },
+    orderBy: { isFeatured: "desc" },
     take: 4,
   });
 
-  const whatsappMessage = encodeURIComponent(
+  // Reviews (verified buyers only) and whether this visitor may write one.
+  const [reviews, session] = await Promise.all([
+    prisma.review.findMany({
+      where: { productId: product.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { customer: { select: { name: true } } },
+    }),
+    auth(),
+  ]);
+  const viewerId = session?.user?.id;
+  const canReview = viewerId ? await hasReceivedProduct(viewerId, product.id) : false;
+  const myReview =
+    viewerId && canReview
+      ? await prisma.review.findUnique({
+          where: { productId_customerId: { productId: product.id, customerId: viewerId } },
+          select: { rating: true, title: true, comment: true },
+        })
+      : null;
+
+  const whatsappHref = whatsappLink(
     `Hello, I am interested in ${product.name} (${product.code}). Please share product details and pricing.`
   );
+  // Pre-fills the contact form so bulk enquiries arrive with the product attached.
+  const bulkQuoteHref = `/contact?${new URLSearchParams({
+    requirement: "Wholesale / Bulk order",
+    product: `${product.name} (${product.code})`,
+  })}`;
 
   // Structured data for rich results. No aggregateRating: only verified
   // customer reviews should be marked up as ratings.
@@ -104,6 +136,16 @@ export default async function ProductPage({ params }: PageProps) {
       category: product.category.name,
       image: product.images.map((image) => absolute(image.url)),
       brand: { "@type": "Brand", name: SITE_NAME },
+      // Only real, verified-buyer reviews are marked up as ratings.
+      ...(rating !== null && product.reviewCount > 0
+        ? {
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: rating.toFixed(1),
+              reviewCount: product.reviewCount,
+            },
+          }
+        : {}),
       offers: {
         "@type": "Offer",
         url: productUrl,
@@ -141,6 +183,10 @@ export default async function ProductPage({ params }: PageProps) {
           <span>/</span>
           <Link href="/products">Products</Link>
           <span>/</span>
+          <Link href={`/products?category=${encodeURIComponent(product.category.name)}`}>
+            {product.category.name}
+          </Link>
+          <span>/</span>
           <strong>{product.name}</strong>
         </div>
       </div>
@@ -172,9 +218,9 @@ export default async function ProductPage({ params }: PageProps) {
             {rating !== null && (
               <div className="product-rating">
                 <span>{"★".repeat(Math.round(rating))}</span>
-                <small>
-                  {rating.toFixed(1)} ({product.reviewCount} reviews)
-                </small>
+                <a href="#reviews">
+                  {rating.toFixed(1)} ({product.reviewCount} {product.reviewCount === 1 ? "review" : "reviews"})
+                </a>
               </div>
             )}
 
@@ -200,9 +246,7 @@ export default async function ProductPage({ params }: PageProps) {
               {product.stock > 0 ? (
                 <>
                   <span />
-                  {product.stock <= 5
-                    ? `Only ${product.stock} left in stock`
-                    : `In Stock — ${product.stock} units available`}
+                  {product.stock <= 5 ? `Only ${product.stock} left — order soon` : "In stock, ready to dispatch"}
                 </>
               ) : (
                 <strong className="out-of-stock">Out of Stock</strong>
@@ -220,6 +264,26 @@ export default async function ProductPage({ params }: PageProps) {
               }}
             />
 
+            {/* WHY BUY */}
+            <ul className="product-assurances">
+              <li>
+                <strong>Free delivery</strong>
+                <span>On orders above ₹{POLICY.freeDeliveryThreshold.toLocaleString("en-IN")}</span>
+              </li>
+              <li>
+                <strong>Cash on Delivery</strong>
+                <span>Pay when it arrives</span>
+              </li>
+              <li>
+                <strong>Breakage covered</strong>
+                <span>Report within {POLICY.damageReportHours} hrs for a free replacement</span>
+              </li>
+              <li>
+                <strong>Secure checkout</strong>
+                <span>UPI, cards &amp; net banking</span>
+              </li>
+            </ul>
+
             {/* B2B */}
             <div className="b2b-product-box">
               <div>
@@ -231,7 +295,7 @@ export default async function ProductPage({ params }: PageProps) {
                 </p>
               </div>
 
-              <Link href="/contact">Request Bulk Quote →</Link>
+              <Link href={bulkQuoteHref}>Request Bulk Quote →</Link>
             </div>
 
             {/* DESCRIPTION */}
@@ -253,15 +317,84 @@ export default async function ProductPage({ params }: PageProps) {
               </div>
             )}
 
-            {/* WHATSAPP */}
-            <a
-              href={`https://wa.me/910000000000?text=${whatsappMessage}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="whatsapp-btn product-whatsapp"
-            >
-              Enquire on WhatsApp <span>↗</span>
-            </a>
+            {/* WHATSAPP (shown once a number is set in lib/business.ts) */}
+            {whatsappHref && (
+              <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="whatsapp-btn product-whatsapp">
+                Enquire on WhatsApp <span>↗</span>
+              </a>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* REVIEWS */}
+      <section className="product-reviews" id="reviews">
+        <div className="product-container">
+          <div className="reviews-head">
+            <p className="section-label">CUSTOMER REVIEWS</p>
+            <h2>
+              {rating !== null ? (
+                <>
+                  <span className="reviews-stars" aria-hidden="true">
+                    {"\u2605".repeat(Math.round(rating))}
+                    <span className="off">{"\u2605".repeat(5 - Math.round(rating))}</span>
+                  </span>{" "}
+                  {rating.toFixed(1)} out of 5
+                </>
+              ) : (
+                "No reviews yet"
+              )}
+            </h2>
+            <p className="reviews-sub">
+              {product.reviewCount > 0
+                ? `Based on ${product.reviewCount} verified ${product.reviewCount === 1 ? "purchase" : "purchases"}`
+                : "Reviews are written only by customers who received this product."}
+            </p>
+          </div>
+
+          <div className="reviews-layout">
+            <ul className="reviews-list">
+              {reviews.map((review) => (
+                <li key={review.id}>
+                  <div className="review-meta">
+                    <span className="reviews-stars small" aria-label={`${review.rating} out of 5 stars`}>
+                      {"\u2605".repeat(review.rating)}
+                      <span className="off">{"\u2605".repeat(5 - review.rating)}</span>
+                    </span>
+                    {review.isVerifiedPurchase && <span className="verified-badge">Verified buyer</span>}
+                  </div>
+                  {review.title && <h3>{review.title}</h3>}
+                  {review.comment && <p>{review.comment}</p>}
+                  <small>
+                    {reviewerDisplayName(review.customer.name)} &middot; {formatOrderDate(review.createdAt)}
+                  </small>
+                </li>
+              ))}
+            </ul>
+
+            <div className="reviews-aside">
+              {canReview ? (
+                <ReviewForm
+                  slug={product.slug}
+                  existing={
+                    myReview
+                      ? { rating: myReview.rating, title: myReview.title ?? "", comment: myReview.comment ?? "" }
+                      : null
+                  }
+                />
+              ) : (
+                <p className="reviews-note">
+                  {viewerId ? (
+                    "You can review this product once your order has been delivered."
+                  ) : (
+                    <>
+                      Bought this? <Link href={`/login?callbackUrl=/products/${product.slug}`}>Log in</Link> after
+                      delivery to share your review.
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -277,38 +410,20 @@ export default async function ProductPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="catalogue-grid">
-              {relatedProducts.map((related) => (
-                <article className="catalogue-card" key={related.slug}>
-                  <Link href={`/products/${related.slug}`}>
-                    <div className="catalogue-image">
-                      <SmartImage
-                        src={related.images[0]?.url ?? "/placeholder-product.svg"}
-                        alt={related.name}
-                        fill
-                        sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw"
-                      />
-                      <span className="catalogue-arrow">↗</span>
-                    </div>
-                  </Link>
-
-                  <div className="catalogue-info">
-                    <div>
-                      <p>{product.category.name}</p>
-                      <h3>{related.name}</h3>
-                    </div>
-                    <span className="product-code">{related.code}</span>
-                  </div>
-
-                  <Link
-                    href={`/products/${related.slug}`}
-                    className="view-product"
-                  >
-                    View Product <span>→</span>
-                  </Link>
-                </article>
-              ))}
-            </div>
+            <ProductCatalogue
+              products={relatedProducts.map((related) => ({
+                id: related.id,
+                name: related.name,
+                slug: related.slug,
+                code: related.code,
+                price: Number(related.price),
+                mrp: related.mrp ? Number(related.mrp) : null,
+                stock: related.stock,
+                rating: null,
+                category: { name: product.category.name },
+                image: related.images[0]?.url ?? "/placeholder-product.svg",
+              }))}
+            />
           </div>
         </section>
       )}

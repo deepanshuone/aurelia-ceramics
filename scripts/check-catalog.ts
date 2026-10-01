@@ -4,8 +4,9 @@
 import fs from "node:fs";
 import { moreProducts } from "../prisma/catalog";
 import { khurjaRangeProducts } from "../prisma/catalog-khurja";
+import { khurjaRange2Products } from "../prisma/catalog-khurja-2";
 
-const all = [...moreProducts, ...khurjaRangeProducts];
+const all = [...moreProducts, ...khurjaRangeProducts, ...khurjaRange2Products];
 const duplicates = (key: "slug" | "code") =>
   all.map((p) => p[key]).filter((value, index, list) => list.indexOf(value) !== index);
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useCart } from "../../components/CartProvider";
-import { CartLine, getCartTotals } from "../../lib/cart";
+import { CartLine, FREE_DELIVERY_THRESHOLD, getCartTotals } from "../../lib/cart";
 
 const MAX_LINE_QUANTITY = 99;
 
@@ -43,6 +43,8 @@ export default function CartPage() {
     }
 
     const { subtotal, delivery, total } = getCartTotals(cart);
+    const amountToFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
+    const freeDeliveryProgress = Math.min(100, Math.round((subtotal / FREE_DELIVERY_THRESHOLD) * 100));
     const hasUnavailable = cart.some((item) => !item.available);
 
     if (loading && cart.length === 0) {
@@ -202,6 +204,23 @@ export default function CartPage() {
 
                     <aside className="cart-summary">
                         <p className="section-label">ORDER SUMMARY</p>
+
+                        {/* Free-delivery nudge */}
+                        <div className="free-delivery-meter" role="status">
+                            <p>
+                                {amountToFreeDelivery > 0 ? (
+                                    <>
+                                        Add <strong>₹{amountToFreeDelivery.toLocaleString("en-IN")}</strong> more for{" "}
+                                        <strong>FREE delivery</strong>
+                                    </>
+                                ) : (
+                                    <>🎉 You&apos;ve unlocked <strong>FREE delivery</strong></>
+                                )}
+                            </p>
+                            <div className="free-delivery-track" aria-hidden="true">
+                                <span style={{ width: `${freeDeliveryProgress}%` }} />
+                            </div>
+                        </div>
 
                         <div className="summary-row">
                             <span>Subtotal</span>

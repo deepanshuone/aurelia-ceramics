@@ -1,68 +1,46 @@
 import Link from "next/link";
 import SmartImage from "../components/SmartImage";
+import { prisma } from "../lib/prisma";
+import { formatRupees } from "../lib/order-display";
 import { SITE_DESCRIPTION, SITE_NAME, getSiteUrl, jsonLd } from "../lib/site";
 
-const categories = [
-  {
-    name: "Dinner Sets",
-    description: "Complete tableware collections for modern dining.",
-    image:
-      "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=900&q=85",
-  },
-  {
-    name: "Plates",
-    description: "Elegant ceramic plates for everyday and premium dining.",
-    image:
-      "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&w=900&q=85",
-  },
-  {
-    name: "Bowls",
-    description: "Functional shapes crafted for beautiful presentation.",
-    image:
-      "https://images.unsplash.com/photo-1523367438061-01c055ce790c?auto=format&fit=crop&w=900&q=85",
-  },
-  {
-    name: "Cups & Mugs",
-    description: "Premium ceramic drinkware for homes and businesses.",
-    image:
-      "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=900&q=85",
-  },
-  {
-    name: "Serving Ware",
-    description: "Designed to make every serving look exceptional.",
-    image:
-      "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=85",
-  },
-  {
-    name: "Hotel & Restaurant",
-    description: "Durable crockery solutions for hospitality businesses.",
-    image:
-      "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=900&q=85",
-  },
-];
+// Rebuilt every 10 minutes; admin product/category edits also refresh it
+// immediately via revalidatePath("/").
+export const revalidate = 600;
 
-const products = [
-  {
-    name: "Ivory Dinner Collection",
-    category: "Dinner Set",
-    image:
-      "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=900&q=85",
-  },
-  {
-    name: "Classic White Plate",
-    category: "Tableware",
-    image:
-      "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&w=900&q=85",
-  },
-  {
-    name: "Stone Ceramic Bowl",
-    category: "Bowls",
-    image:
-      "https://images.unsplash.com/photo-1523367438061-01c055ce790c?auto=format&fit=crop&w=900&q=85",
-  },
-];
+const FEATURED_LIMIT = 8;
 
-export default function Home() {
+async function getHomeData() {
+  const [categories, featured] = await Promise.all([
+    prisma.category.findMany({
+      where: { isActive: true, products: { some: { isActive: true } } },
+      orderBy: { name: "asc" },
+      select: {
+        name: true,
+        description: true,
+        image: true,
+        _count: { select: { products: { where: { isActive: true } } } },
+      },
+    }),
+    prisma.product.findMany({
+      where: { isActive: true, isFeatured: true, category: { isActive: true } },
+      orderBy: { createdAt: "desc" },
+      take: FEATURED_LIMIT,
+      select: {
+        slug: true,
+        name: true,
+        price: true,
+        mrp: true,
+        category: { select: { name: true } },
+        images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
+      },
+    }),
+  ]);
+  return { categories, featured };
+}
+
+export default async function Home() {
+  const { categories, featured } = await getHomeData();
   const site = getSiteUrl();
   const structuredData = [
     {
@@ -169,22 +147,25 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="category-grid">
+          <div className="category-tiles">
             {categories.map((category) => (
               <Link
                 href={`/products?category=${encodeURIComponent(category.name)}`}
-                className="category-card"
+                className="category-tile"
                 key={category.name}
               >
-                <SmartImage src={category.image} alt={category.name} fill sizes="(max-width: 700px) 100vw, 33vw" />
-
-                <div className="category-overlay" />
-
-                <div className="category-content">
-                  <p>{category.name}</p>
-                  <span>{category.description}</span>
-                  <b>Explore →</b>
+                <div className="category-tile-image">
+                  <SmartImage
+                    src={category.image ?? "/placeholder-product.svg"}
+                    alt=""
+                    fill
+                    sizes="(max-width: 600px) 45vw, (max-width: 1100px) 25vw, 180px"
+                  />
                 </div>
+                <strong>{category.name}</strong>
+                <span>
+                  {category._count.products} {category._count.products === 1 ? "product" : "products"}
+                </span>
               </Link>
             ))}
           </div>
@@ -205,17 +186,28 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="product-grid">
-            {products.map((product) => (
-              <Link href="/products" className="product-card" key={product.name}>
+          <div className="product-grid featured-grid">
+            {featured.map((product) => (
+              <Link href={`/products/${product.slug}`} className="product-card" key={product.slug}>
                 <div className="product-image">
-                  <SmartImage src={product.image} alt={product.name} fill sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw" />
+                  <SmartImage
+                    src={product.images[0]?.url ?? "/placeholder-product.svg"}
+                    alt={product.name}
+                    fill
+                    sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw"
+                  />
                   <span className="product-arrow">↗</span>
                 </div>
 
                 <div className="product-info">
-                  <p>{product.category}</p>
+                  <p>{product.category.name}</p>
                   <h3>{product.name}</h3>
+                  <strong className="product-price">
+                    {formatRupees(product.price)}
+                    {product.mrp && Number(product.mrp) > Number(product.price) && (
+                      <s>{formatRupees(product.mrp)}</s>
+                    )}
+                  </strong>
                 </div>
               </Link>
             ))}

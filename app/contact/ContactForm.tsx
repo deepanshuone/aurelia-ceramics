@@ -3,12 +3,21 @@
 import { useState } from "react";
 import { ENQUIRY_REQUIREMENTS } from "../../lib/enquiries";
 
-export default function ContactForm() {
+export default function ContactForm({
+  initialRequirement,
+  initialMessage,
+}: {
+  initialRequirement?: string;
+  initialMessage?: string;
+}) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [requirement, setRequirement] = useState("");
-  const [message, setMessage] = useState("");
+  // Only accept known options (the value comes from the URL).
+  const [requirement, setRequirement] = useState(
+    ENQUIRY_REQUIREMENTS.find((option) => option === initialRequirement) ?? ""
+  );
+  const [message, setMessage] = useState(initialMessage ?? "");
   // Honeypot field, hidden from people; bots tend to fill every input.
   const [website, setWebsite] = useState("");
   const [error, setError] = useState("");

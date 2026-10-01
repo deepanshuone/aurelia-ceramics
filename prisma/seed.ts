@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient } from "../lib/generated/prisma/client";
 import { moreProducts, newCategoryDescriptions, type SeedProduct } from "./catalog";
 import { khurjaCategoryDescriptions, khurjaRangeProducts } from "./catalog-khurja";
+import { khurja2CategoryDescriptions, khurjaRange2Products } from "./catalog-khurja-2";
 const prisma = new PrismaClient();
 
 const products = [
@@ -133,11 +134,12 @@ const products = [
   },
 ];
 
-const allProducts: SeedProduct[] = [...(products as SeedProduct[]), ...moreProducts, ...khurjaRangeProducts];
+const allProducts: SeedProduct[] = [...(products as SeedProduct[]), ...moreProducts, ...khurjaRangeProducts, ...khurjaRange2Products];
 
 const categoryDescriptions: Record<string, string> = {
   ...newCategoryDescriptions,
   ...khurjaCategoryDescriptions,
+  ...khurja2CategoryDescriptions,
   "Dinner Sets": "Complete tableware collections for modern dining.",
   Plates: "Elegant ceramic plates for everyday and premium dining.",
   Bowls: "Functional shapes crafted for beautiful presentation.",

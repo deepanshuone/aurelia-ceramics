@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import ContactForm from './ContactForm';
 import { BUSINESS } from '../../lib/business';
 
@@ -7,12 +8,7 @@ export const metadata: Metadata = {
   description: 'Get in touch with Aurelia Ceramics for product enquiries, wholesale requirements, hotel projects or custom/OEM requests.',
 };
 
-export default async function Contact({
-  searchParams,
-}: {
-  searchParams: Promise<{ requirement?: string; product?: string }>;
-}) {
-  const { requirement, product } = await searchParams;
+export default function Contact() {
   return (
     <main>
       <section className="contact">
@@ -40,14 +36,10 @@ export default async function Contact({
             </div>
           </div>
 
-          <ContactForm
-            initialRequirement={requirement}
-            initialMessage={
-              product
-                ? [`I'd like a quote for: ${product.slice(0, 150)}`, "Quantity: ", "Delivery city: "].join("\n")
-                : undefined
-            }
-          />
+          {/* Suspense: the form reads ?requirement=&product= on the client, so this page stays static. */}
+          <Suspense fallback={<div className="form" aria-busy="true" />}>
+            <ContactForm />
+          </Suspense>
         </div>
       </section>
     </main>

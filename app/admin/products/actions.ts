@@ -83,6 +83,7 @@ function parseImages(text: string) {
 
 function refreshStorefront(...slugs: (string | undefined)[]) {
   revalidateTag("nav-categories");
+  revalidateTag("products");
   revalidatePath("/");
   revalidatePath("/products");
   for (const slug of slugs) if (slug) revalidatePath(`/products/${slug}`);

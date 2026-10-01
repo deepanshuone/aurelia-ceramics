@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { prisma } from "../../lib/prisma";
 import { Prisma } from "../../lib/generated/prisma/client";
 import ProductCatalogue from "../../components/ProductCatalogue";
@@ -51,6 +52,97 @@ const SORT_OPTIONS: Record<string, Prisma.ProductOrderByWithRelationInput> = {
   popularity: { orderItems: { _count: "desc" } },
 };
 
+type CatalogueFilters = {
+  search: string;
+  category: string;
+  minPrice: string;
+  maxPrice: string;
+  inStock: boolean;
+  sort: string;
+  page: number;
+};
+
+/**
+ * Catalogue query, cached per filter combination for 5 minutes (and dropped
+ * immediately when an admin edits products/categories via revalidateTag).
+ * Browsing therefore rarely touches the database, which on Neon's free tier
+ * can take several seconds to wake up.
+ */
+const getCatalogue = unstable_cache(
+  async (filters: CatalogueFilters) => {
+    const where: Prisma.ProductWhereInput = { isActive: true, category: { isActive: true } };
+
+    if (filters.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: "insensitive" } },
+        { description: { contains: filters.search, mode: "insensitive" } },
+        { category: { name: { contains: filters.search, mode: "insensitive" } } },
+      ];
+    }
+
+    if (filters.category && filters.category !== "All Products") {
+      // Keep the visibility check: a hidden category stays hidden even by name.
+      where.category = { name: filters.category, isActive: true };
+    }
+
+    const minPrice = filters.minPrice ? Number(filters.minPrice) : NaN;
+    const maxPrice = filters.maxPrice ? Number(filters.maxPrice) : NaN;
+    if (!Number.isNaN(minPrice) || !Number.isNaN(maxPrice)) {
+      where.price = {};
+      if (!Number.isNaN(minPrice)) where.price.gte = minPrice;
+      if (!Number.isNaN(maxPrice)) where.price.lte = maxPrice;
+    }
+
+    if (filters.inStock) {
+      where.stock = { gt: 0 };
+    }
+
+    const totalProducts = await prisma.product.count({ where });
+    const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
+    const page = Math.min(Math.max(filters.page, 1), totalPages);
+
+    const [dbProducts, dbCategories] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: {
+          category: true,
+          images: { orderBy: { sortOrder: "asc" }, take: 1 },
+        },
+        // id as a tie-breaker keeps page boundaries stable.
+        orderBy: [SORT_OPTIONS[filters.sort], { id: "asc" }],
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      prisma.category.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { name: true },
+      }),
+    ]);
+
+    return {
+      totalProducts,
+      totalPages,
+      page,
+      categories: dbCategories.map((c) => c.name),
+      products: dbProducts.map((product) => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        code: product.code,
+        price: Number(product.price),
+        mrp: product.mrp ? Number(product.mrp) : null,
+        stock: product.stock,
+        rating: product.rating ? Number(product.rating) : null,
+        category: { name: product.category.name },
+        image: product.images[0]?.url ?? "/placeholder-product.svg",
+      })),
+    };
+  },
+  ["catalogue"],
+  { revalidate: 300, tags: ["products"] }
+);
+
 export default async function ProductsPage({
   searchParams,
 }: {
@@ -60,77 +152,19 @@ export default async function ProductsPage({
 
   const search = params.search?.trim() ?? "";
   const category = params.category?.trim() ?? "";
-  const minPrice = params.minPrice ? Number(params.minPrice) : undefined;
-  const maxPrice = params.maxPrice ? Number(params.maxPrice) : undefined;
   const inStock = params.inStock === "1";
   const sort = params.sort && SORT_OPTIONS[params.sort] ? params.sort : "newest";
-
-  const where: Prisma.ProductWhereInput = { isActive: true, category: { isActive: true } };
-
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { description: { contains: search, mode: "insensitive" } },
-      { category: { name: { contains: search, mode: "insensitive" } } },
-    ];
-  }
-
-  if (category && category !== "All Products") {
-    // Keep the visibility check: a hidden category stays hidden even by name.
-    where.category = { name: category, isActive: true };
-  }
-
-  if (minPrice !== undefined || maxPrice !== undefined) {
-    where.price = {};
-    if (minPrice !== undefined && !Number.isNaN(minPrice)) {
-      where.price.gte = minPrice;
-    }
-    if (maxPrice !== undefined && !Number.isNaN(maxPrice)) {
-      where.price.lte = maxPrice;
-    }
-  }
-
-  if (inStock) {
-    where.stock = { gt: 0 };
-  }
-
-  const totalProducts = await prisma.product.count({ where });
-  const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
   const requestedPage = Number.parseInt(params.page ?? "1", 10);
-  const page = Number.isFinite(requestedPage) ? Math.min(Math.max(requestedPage, 1), totalPages) : 1;
 
-  const [dbProducts, dbCategories] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      include: {
-        category: true,
-        images: { orderBy: { sortOrder: "asc" }, take: 1 },
-      },
-      // id as a tie-breaker keeps page boundaries stable.
-      orderBy: [SORT_OPTIONS[sort], { id: "asc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-    }),
-    prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-
-  const products = dbProducts.map((product) => ({
-    id: product.id,
-    name: product.name,
-    slug: product.slug,
-    code: product.code,
-    price: Number(product.price),
-    mrp: product.mrp ? Number(product.mrp) : null,
-    stock: product.stock,
-    rating: product.rating ? Number(product.rating) : null,
-    category: { name: product.category.name },
-    image: product.images[0]?.url ?? "/placeholder-product.svg",
-  }));
-
-  const categories = dbCategories.map((c) => c.name);
+  const { products, categories, totalProducts, totalPages, page } = await getCatalogue({
+    search,
+    category,
+    minPrice: params.minPrice ?? "",
+    maxPrice: params.maxPrice ?? "",
+    inStock,
+    sort,
+    page: Number.isFinite(requestedPage) ? requestedPage : 1,
+  });
 
   return (
     <main className="products-page">

@@ -23,6 +23,31 @@ const reviewSchema = z.object({
     .transform((value) => value || null),
 });
 
+// Whether the current visitor may review a product (and their existing review).
+export async function GET(request: Request) {
+  const slug = new URL(request.url).searchParams.get("slug") ?? "";
+  const session = await auth();
+  const customerId = session?.user?.id;
+  if (!customerId || !slug) {
+    return NextResponse.json({ loggedIn: Boolean(customerId), canReview: false, existing: null });
+  }
+
+  const product = await prisma.product.findUnique({ where: { slug }, select: { id: true } });
+  if (!product || !(await hasReceivedProduct(customerId, product.id))) {
+    return NextResponse.json({ loggedIn: true, canReview: false, existing: null });
+  }
+
+  const existing = await prisma.review.findUnique({
+    where: { productId_customerId: { productId: product.id, customerId } },
+    select: { rating: true, title: true, comment: true },
+  });
+  return NextResponse.json({
+    loggedIn: true,
+    canReview: true,
+    existing: existing ? { rating: existing.rating, title: existing.title ?? "", comment: existing.comment ?? "" } : null,
+  });
+}
+
 // Create or update the signed-in customer's review of a product they received.
 export async function POST(request: Request) {
   const session = await auth();

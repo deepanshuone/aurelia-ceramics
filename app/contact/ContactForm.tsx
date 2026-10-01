@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ENQUIRY_REQUIREMENTS } from "../../lib/enquiries";
 
-export default function ContactForm({
-  initialRequirement,
-  initialMessage,
-}: {
-  initialRequirement?: string;
-  initialMessage?: string;
-}) {
+export default function ContactForm() {
+  // "Request Bulk Quote" links pass ?requirement=&product= to pre-fill the form.
+  const searchParams = useSearchParams();
+  const initialRequirement = searchParams.get("requirement") ?? undefined;
+  const product = searchParams.get("product");
+  const initialMessage = product
+    ? [`I'd like a quote for: ${product.slice(0, 150)}`, "Quantity: ", "Delivery city: "].join("\n")
+    : undefined;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");

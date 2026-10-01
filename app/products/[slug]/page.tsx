@@ -6,9 +6,8 @@ import { prisma } from "../../../lib/prisma";
 import ProductPurchase from "./ProductPurchase";
 import SmartImage from "../../../components/SmartImage";
 import ProductCatalogue from "../../../components/ProductCatalogue";
-import ReviewForm from "./ReviewForm";
-import { auth } from "../../../auth";
-import { hasReceivedProduct, reviewerDisplayName } from "../../../lib/reviews";
+import ReviewComposer from "./ReviewComposer";
+import { reviewerDisplayName } from "../../../lib/reviews";
 import { formatOrderDate } from "../../../lib/order-display";
 import { SITE_NAME, getSiteUrl, jsonLd } from "../../../lib/site";
 import { POLICY, whatsappLink } from "../../../lib/business";
@@ -29,6 +28,18 @@ const getProduct = cache(async (slug: string) => {
 
   return product;
 });
+
+// Served from Vercel's edge cache; refreshed every 10 minutes, and immediately
+// when an admin edits the product or a review is posted (revalidatePath).
+export const revalidate = 600;
+
+export async function generateStaticParams() {
+  const products = await prisma.product.findMany({
+    where: { isActive: true, category: { isActive: true } },
+    select: { slug: true },
+  });
+  return products.map((product) => ({ slug: product.slug }));
+}
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -92,25 +103,14 @@ export default async function ProductPage({ params }: PageProps) {
     take: 4,
   });
 
-  // Reviews (verified buyers only) and whether this visitor may write one.
-  const [reviews, session] = await Promise.all([
-    prisma.review.findMany({
-      where: { productId: product.id },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      include: { customer: { select: { name: true } } },
-    }),
-    auth(),
-  ]);
-  const viewerId = session?.user?.id;
-  const canReview = viewerId ? await hasReceivedProduct(viewerId, product.id) : false;
-  const myReview =
-    viewerId && canReview
-      ? await prisma.review.findUnique({
-          where: { productId_customerId: { productId: product.id, customerId: viewerId } },
-          select: { rating: true, title: true, comment: true },
-        })
-      : null;
+  // Public reviews. Whether *this* visitor may write one is checked in the
+  // browser (ReviewComposer), so the page itself can be cached.
+  const reviews = await prisma.review.findMany({
+    where: { productId: product.id },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    include: { customer: { select: { name: true } } },
+  });
 
   const whatsappHref = whatsappLink(
     `Hello, I am interested in ${product.name} (${product.code}). Please share product details and pricing.`
@@ -373,27 +373,7 @@ export default async function ProductPage({ params }: PageProps) {
             </ul>
 
             <div className="reviews-aside">
-              {canReview ? (
-                <ReviewForm
-                  slug={product.slug}
-                  existing={
-                    myReview
-                      ? { rating: myReview.rating, title: myReview.title ?? "", comment: myReview.comment ?? "" }
-                      : null
-                  }
-                />
-              ) : (
-                <p className="reviews-note">
-                  {viewerId ? (
-                    "You can review this product once your order has been delivered."
-                  ) : (
-                    <>
-                      Bought this? <Link href={`/login?callbackUrl=/products/${product.slug}`}>Log in</Link> after
-                      delivery to share your review.
-                    </>
-                  )}
-                </p>
-              )}
+              <ReviewComposer slug={product.slug} />
             </div>
           </div>
         </div>

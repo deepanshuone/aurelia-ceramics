@@ -27,6 +27,7 @@ const categorySchema = z.object({
 
 function refresh() {
   revalidateTag("nav-categories");
+  revalidateTag("products");
   revalidatePath("/");
   revalidatePath("/products");
   revalidatePath("/admin/categories");

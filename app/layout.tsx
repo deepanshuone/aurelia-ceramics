@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DM_Sans, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -9,6 +10,16 @@ import { whatsappLink } from '../lib/business';
 import { getNavCategories } from '../lib/nav';
 import { SITE_DESCRIPTION, SITE_NAME, getSiteUrl } from '../lib/site';
 
+// Self-hosted at build time: no render-blocking request to Google Fonts.
+const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], display: 'swap', variable: '--font-dm-sans' });
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-playfair',
+});
+
 export const metadata: Metadata = {
   // Makes relative canonical/OG URLs absolute.
   metadataBase: new URL(getSiteUrl()),
@@ -17,6 +28,8 @@ export const metadata: Metadata = {
     template: '%s | AURELIA Ceramics',
   },
   description: SITE_DESCRIPTION,
+  // Every page canonicalises to itself unless it sets its own (products, catalogue).
+  alternates: { canonical: './' },
   applicationName: SITE_NAME,
   openGraph: {
     type: 'website',
@@ -31,7 +44,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${dmSans.variable} ${playfair.variable}`}>
       <body>
         <Providers>
           <a href="#main-content" className="skip-link">

@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       // Private or per-visitor pages; they are also marked noindex.
-      disallow: ["/admin", "/account", "/api/", "/cart", "/checkout", "/order-success", "/orders", "/login", "/register"],
+      disallow: ["/admin", "/account", "/api/", "/cart", "/checkout", "/order-success", "/orders", "/login", "/register", "/forgot-password", "/reset-password"],
     },
     sitemap: `${site}/sitemap.xml`,
     host: site,

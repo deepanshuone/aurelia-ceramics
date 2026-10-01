@@ -1,8 +1,12 @@
+import Image from "next/image";
 import Link from "next/link";
 import SmartImage from "../components/SmartImage";
 import { prisma } from "../lib/prisma";
 import { formatRupees } from "../lib/order-display";
 import { SITE_DESCRIPTION, SITE_NAME, getSiteUrl, jsonLd } from "../lib/site";
+
+const HERO_IMAGE = "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1600&q=70";
+const B2B_IMAGE = "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=2200&q=85";
 
 // Rebuilt every 10 minutes; admin product/category edits also refresh it
 // immediately via revalidatePath("/").
@@ -68,6 +72,7 @@ export default async function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
       {/* HERO */}
       <section className="hero">
+        <Image src={HERO_IMAGE} alt="" fill priority sizes="100vw" quality={70} className="hero-bg" />
         <div className="hero-overlay" />
 
         <div className="container hero-content">
@@ -269,6 +274,8 @@ export default async function Home() {
 
       {/* B2B */}
       <section className="b2b" id="b2b">
+        <Image src={B2B_IMAGE} alt="" fill sizes="100vw" quality={65} className="section-bg" />
+        <div className="b2b-overlay" />
         <div className="container b2b-inner">
           <div>
             <p className="section-label">FOR BUSINESS</p>

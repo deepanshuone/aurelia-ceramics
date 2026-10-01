@@ -13,6 +13,8 @@ type Product = {
   rating: number | null;
   category: { name: string };
   image: string;
+  /** Optional highlight under the price, e.g. "Gets you FREE delivery". */
+  note?: string;
 };
 
 type Props = {
@@ -58,6 +60,8 @@ export default function ProductCatalogue({ products }: Props) {
               <del>₹{product.mrp.toLocaleString("en-IN")}</del>
             )}
           </div>
+
+          {product.note && <p className="catalogue-note">{product.note}</p>}
 
           <div className="catalogue-actions">
             <QuickAddButton slug={product.slug} name={product.name} inStock={product.stock > 0} />

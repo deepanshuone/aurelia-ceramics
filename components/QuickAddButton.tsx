@@ -37,7 +37,7 @@ export default function QuickAddButton({ slug, name, inStock }: { slug: string; 
         className={`quick-add${state === "added" ? " added" : ""}`}
         onClick={handleClick}
         disabled={state === "adding"}
-        aria-label={`Add ${name} to cart`}
+        aria-label={`Add to cart: ${name}`}
       >
         {state === "adding" ? "Adding…" : state === "added" ? "Added ✓" : "Add to cart"}
       </button>

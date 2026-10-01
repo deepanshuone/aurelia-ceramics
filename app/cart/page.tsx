@@ -4,9 +4,37 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useCart } from "../../components/CartProvider";
-import { CartLine, FREE_DELIVERY_THRESHOLD, getCartTotals } from "../../lib/cart";
+import CartSuggestions from "../../components/CartSuggestions";
+import { POLICY } from "../../lib/business";
+import { CartLine, DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, getCartTotals } from "../../lib/cart";
 
 const MAX_LINE_QUANTITY = 99;
+
+/** Delivery and policy facts a shopper wants before buying (shown with an empty or filled cart). */
+function ShoppingInfo() {
+    return (
+        <ul className="cart-info-strip">
+            <li>
+                <strong>Free delivery</strong>
+                <span>
+                    above ₹{FREE_DELIVERY_THRESHOLD.toLocaleString("en-IN")} · else ₹{DELIVERY_FEE}
+                </span>
+            </li>
+            <li>
+                <strong>Ships in {POLICY.dispatchDays}</strong>
+                <span>arrives in {POLICY.deliveryDays}</span>
+            </li>
+            <li>
+                <strong>Cash on Delivery</strong>
+                <span>or pay securely online</span>
+            </li>
+            <li>
+                <strong>{POLICY.returnDays}-day returns</strong>
+                <span>free replacement if damaged</span>
+            </li>
+        </ul>
+    );
+}
 
 export default function CartPage() {
     const {
@@ -79,6 +107,16 @@ export default function CartPage() {
                         Continue Shopping →
                     </Link>
                 </div>
+
+                <div className="cart-container">
+                    <ShoppingInfo />
+                    <CartSuggestions
+                        excludeSlugs={[]}
+                        needForFreeDelivery={0}
+                        label="POPULAR RIGHT NOW"
+                        heading="Pieces our customers love"
+                    />
+                </div>
             </main>
         );
     }
@@ -95,6 +133,8 @@ export default function CartPage() {
                         <em>selection.</em>
                     </h1>
                 </div>
+
+                <ShoppingInfo />
 
                 {notices.length > 0 && (
                     <div className="cart-notice" role="status">
@@ -290,6 +330,17 @@ export default function CartPage() {
                         </div>
                     </aside>
                 </div>
+
+                <CartSuggestions
+                    excludeSlugs={cart.map((item) => item.slug)}
+                    needForFreeDelivery={amountToFreeDelivery}
+                    label="YOU MAY ALSO LIKE"
+                    heading={
+                        amountToFreeDelivery > 0
+                            ? `Add ₹${amountToFreeDelivery.toLocaleString("en-IN")} more for free delivery`
+                            : "Pairs well with your selection"
+                    }
+                />
             </div>
         </main>
     );

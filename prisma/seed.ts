@@ -18,7 +18,7 @@ const products = [
     description:
       "A timeless ceramic dinner collection designed for elegant everyday dining, hospitality spaces and premium table settings.",
     image:
-      "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1400&q=90",
+      "/products/cream-scalloped-dinner-plate-set.jpg",
     specifications: [
       ["Material", "Ceramic"],
       ["Finish", "Ivory"],
@@ -39,7 +39,7 @@ const products = [
     description:
       "A versatile ceramic plate with a clean profile, designed for restaurants, hotels and modern dining environments.",
     image:
-      "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&w=1400&q=90",
+      "/products/white-coupe-plate.jpg",
     specifications: [
       ["Material", "Ceramic"],
       ["Finish", "Classic White"],
@@ -102,7 +102,7 @@ const products = [
     description:
       "Contemporary ceramic serving pieces created for elegant presentation and professional food service.",
     image:
-      "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1400&q=90",
+      "/products/white-leaf-serving-platter.jpg",
     specifications: [
       ["Material", "Ceramic"],
       ["Finish", "Contemporary"],
@@ -123,7 +123,7 @@ const products = [
     description:
       "Durable ceramic tableware solutions designed for hotels, restaurants and large-volume hospitality requirements.",
     image:
-      "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=1400&q=90",
+      "/products/slate-grey-dinner-set.jpg",
     specifications: [
       ["Material", "Ceramic"],
       ["Finish", "White"],
@@ -185,9 +185,8 @@ async function main() {
         price: product.price,
         mrp: product.mrp,
         stock: product.stock,
-        // Ratings come only from real reviews; seed data starts with none.
-        rating: product.rating ?? null,
-        reviewCount: product.reviewCount ?? 0,
+        // rating / reviewCount are deliberately not touched here: they are
+        // computed from real reviews, and a re-seed must not reset them.
         isFeatured: product.isFeatured,
         description: product.description,
         specifications: product.specifications,

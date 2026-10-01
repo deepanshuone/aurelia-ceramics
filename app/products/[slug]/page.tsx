@@ -290,7 +290,7 @@ export default async function ProductPage({ params }: PageProps) {
             <div className="b2b-product-box">
               <div>
                 <span>B2B / BULK BUYING</span>
-                <h3>Buying for your business?</h3>
+                <h2>Buying for your business?</h2>
                 <p>
                   Get special pricing for bulk quantities, hotels,
                   restaurants and distributors.

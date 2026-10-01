@@ -25,7 +25,7 @@ export default async function Footer() {
         </div>
 
         <div>
-          <h4>Shop</h4>
+          <h2 className="footer-heading">Shop</h2>
           {topCategories.map((category) => (
             <Link key={category.name} href={`/products?category=${encodeURIComponent(category.name)}`}>
               {category.name}
@@ -35,14 +35,14 @@ export default async function Footer() {
         </div>
 
         <div>
-          <h4>Explore</h4>
+          <h2 className="footer-heading">Explore</h2>
           <Link href="/products">Products</Link>
           <Link href="/about">About Us</Link>
           <Link href="/contact">Contact</Link>
         </div>
 
         <div>
-          <h4>Policies</h4>
+          <h2 className="footer-heading">Policies</h2>
           <Link href="/privacy-policy">Privacy Policy</Link>
           <Link href="/terms-and-conditions">Terms &amp; Conditions</Link>
           <Link href="/shipping-policy">Shipping Policy</Link>
@@ -50,7 +50,7 @@ export default async function Footer() {
         </div>
 
         <div>
-          <h4>Contact</h4>
+          <h2 className="footer-heading">Contact</h2>
           <p>{BUSINESS.address}</p>
           <p>
             <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a>

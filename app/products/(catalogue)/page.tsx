@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
+import Image from "next/image";
 import { prisma } from "../../../lib/prisma";
 import { Prisma } from "../../../lib/generated/prisma/client";
 import ProductCatalogue from "../../../components/ProductCatalogue";
 import ProductFilters from "../../../components/ProductFilters";
 import CataloguePagination from "../../../components/CataloguePagination";
+
+const HERO_IMAGE = "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1600&q=70";
 
 const PAGE_SIZE = 24;
 
@@ -170,6 +173,7 @@ export default async function ProductsPage({
     <main className="products-page">
       {/* HEADER */}
       <section className="products-hero">
+        <Image src={HERO_IMAGE} alt="" fill priority sizes="100vw" quality={65} className="hero-bg" />
         <div className="products-hero-overlay" />
 
         <div className="products-hero-content">

@@ -75,6 +75,10 @@ export default function LoginForm() {
         />
       </label>
 
+      <p className="auth-switch" style={{ textAlign: "right", margin: 0 }}>
+        <Link href="/forgot-password">Forgot password?</Link>
+      </p>
+
       <button className="button dark" type="submit" disabled={loading}>
         {loading ? "Signing in..." : "Sign In →"}
       </button>

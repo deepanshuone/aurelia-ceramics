@@ -48,6 +48,9 @@ export class CheckoutError extends Error {
 const toPaise = (rupees: number) => Math.round(rupees * 100);
 const toRupees = (paise: number) => paise / 100;
 
+// Razorpay cannot charge less than ₹1, and an order must never be free or negative.
+const MIN_ORDER_PAISE = 100;
+
 export type Quote = {
   items: CartLine[];
   subtotal: number;
@@ -68,6 +71,12 @@ async function resolveCoupon(code: string, subtotalPaise: number) {
   }
   if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
     throw new CheckoutError("This coupon has reached its usage limit.", 400, "COUPON");
+  }
+
+  // Guards against bad rows (e.g. edited directly in the database).
+  const value = Number(coupon.discountValue);
+  if (!Number.isFinite(value) || value <= 0 || (coupon.discountType === "PERCENTAGE" && value > 100)) {
+    throw new CheckoutError("This coupon code is not valid.", 400, "COUPON");
   }
 
   const minOrder = coupon.minOrderValue ? toPaise(Number(coupon.minOrderValue)) : 0;
@@ -109,12 +118,29 @@ export async function quoteCheckout(customerId: string, couponCode?: string): Pr
     throw new CheckoutError(`${unavailable.name} is out of stock.`, 409, "OUT_OF_STOCK");
   }
 
+  // Never sell something with a zero/negative price or an impossible quantity.
+  const invalid = cart.items.find(
+    (item) =>
+      !Number.isFinite(item.price) ||
+      toPaise(item.price) <= 0 ||
+      !Number.isInteger(item.quantity) ||
+      item.quantity < 1
+  );
+  if (invalid) {
+    throw new CheckoutError(`${invalid.name} can't be ordered right now.`, 409, "CART_CHANGED");
+  }
+
   const subtotal = cart.items.reduce((sum, item) => sum + toPaise(item.price) * item.quantity, 0);
   const applied = couponCode ? await resolveCoupon(couponCode, subtotal) : null;
-  const discount = applied?.discount ?? 0;
 
   // Free delivery is judged on the merchandise value, before any coupon.
   const delivery = subtotal >= toPaise(FREE_DELIVERY_THRESHOLD) ? 0 : toPaise(DELIVERY_FEE);
+
+  // A coupon can reduce the bill but never make the order free or negative.
+  const discount = Math.max(0, Math.min(applied?.discount ?? 0, subtotal + delivery - MIN_ORDER_PAISE));
+  if (subtotal + delivery - discount < MIN_ORDER_PAISE) {
+    throw new CheckoutError("The order total is too low to process.", 400, "CART_CHANGED");
+  }
 
   return {
     items: cart.items,
@@ -180,6 +206,19 @@ export async function placeOrder(input: {
 
   return prisma.$transaction(
     async (tx) => {
+      // Claim this exact cart first. A double click or a second tab running the
+      // same checkout waits here, then finds the lines already gone and stops,
+      // so one cart can only ever become one order.
+      const claimedLines = await tx.cartItem.deleteMany({
+        where: {
+          cart: { customerId: input.customerId },
+          OR: quote.items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+        },
+      });
+      if (claimedLines.count !== quote.items.length) {
+        throw new CheckoutError("Your cart changed. Please review it and try again.", 409, "CART_CHANGED");
+      }
+
       // Conditional decrements: if another order took the stock first, the
       // update matches zero rows and the whole transaction rolls back.
       for (const item of quote.items) {
@@ -241,8 +280,6 @@ export async function placeOrder(input: {
         select: { orderId: true, total: true },
       });
 
-      await tx.cartItem.deleteMany({ where: { cart: { customerId: input.customerId } } });
-
       if (input.saveAddress) {
         const existing = await tx.address.findFirst({
           where: {
@@ -269,7 +306,7 @@ export async function placeOrder(input: {
         }
       }
 
-      return { orderId: order.orderId, total: Number(order.total) };
+      return { orderId: order.orderId, total: Number(order.total), slugs: quote.items.map((item) => item.slug) };
     },
     { timeout: 20000 }
   );

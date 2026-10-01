@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
-import { prisma } from "../../lib/prisma";
-import { Prisma } from "../../lib/generated/prisma/client";
-import ProductCatalogue from "../../components/ProductCatalogue";
-import ProductFilters from "../../components/ProductFilters";
-import CataloguePagination from "../../components/CataloguePagination";
+import { prisma } from "../../../lib/prisma";
+import { Prisma } from "../../../lib/generated/prisma/client";
+import ProductCatalogue from "../../../components/ProductCatalogue";
+import ProductFilters from "../../../components/ProductFilters";
+import CataloguePagination from "../../../components/CataloguePagination";
 
 const PAGE_SIZE = 24;
 

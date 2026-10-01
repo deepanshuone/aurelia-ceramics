@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { auth } from "../../../auth";
@@ -46,7 +47,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const order = await placeOrder({ customerId, ...parsed.data });
+    const { slugs, ...order } = await placeOrder({ customerId, ...parsed.data });
+
+    // Stock just changed: refresh the cached product pages so they don't keep
+    // showing "in stock" for items that were just bought.
+    for (const slug of slugs) revalidatePath(`/products/${slug}`);
 
     // COD orders are confirmed straight away; email after the response is sent.
     if (parsed.data.paymentMethod === "COD") {

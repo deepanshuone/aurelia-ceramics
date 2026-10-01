@@ -38,11 +38,18 @@ const productSchema = z
     categoryId: z.string().min(1, "Choose a category."),
     price: money("Price").refine((value) => value > 0, "Price must be more than zero."),
     mrp: optionalMoney("MRP"),
-    stock: z.coerce
-      .number({ message: "Stock must be a whole number." })
-      .int("Stock must be a whole number.")
-      .min(0, "Stock can't be negative.")
-      .max(1_000_000),
+    stock: z
+      .string()
+      .trim()
+      .min(1, "Stock is required (enter 0 if there is none).")
+      .transform((value) => Number(value))
+      .pipe(
+        z
+          .number({ message: "Stock must be a whole number." })
+          .int("Stock must be a whole number.")
+          .min(0, "Stock can't be negative.")
+          .max(1_000_000)
+      ),
     description: optionalText(5000),
     specifications: z.string().max(5000),
     images: z.string().max(10000),

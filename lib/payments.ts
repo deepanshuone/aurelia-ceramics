@@ -126,6 +126,9 @@ export async function startPayment(customerId: string, orderId: string) {
   }
 
   const amount = toPaise(order.total);
+  if (!Number.isInteger(amount) || amount < 100) {
+    throw new PaymentError("This order's amount can't be paid online. Please contact us.", 409);
+  }
   let razorpayOrderId = order.payment?.razorpayOrderId;
 
   if (!razorpayOrderId) {

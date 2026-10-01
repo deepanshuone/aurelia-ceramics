@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { type ActionState, firstIssue, optionalText, requireAdmin } from "../../../lib/admin";
 import { CANCELLABLE_STATUSES as CANCELLABLE, NEXT_STATUSES } from "../../../lib/order-display";
 import { releaseOrderInventory } from "../../../lib/order-inventory";
+import { type OrderStatusEmail, sendOrderStatusEmail } from "../../../lib/order-status-emails";
 import { PaymentError, refundRazorpayPayment } from "../../../lib/payments";
 import { prisma } from "../../../lib/prisma";
 
@@ -14,6 +16,12 @@ function refresh(orderId: string) {
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderId}`);
+}
+
+// Tells the customer about the change once the response has been sent; a mail
+// problem can never undo or delay what the admin just did.
+function notifyCustomer(orderRowId: string, event: OrderStatusEmail) {
+  after(() => sendOrderStatusEmail(orderRowId, event).then(() => undefined));
 }
 
 async function loadOrder(orderRowId: string) {
@@ -58,6 +66,9 @@ export async function updateOrderStatus(
   if (updated.count === 0) return { error: "This order was just updated by someone else. Refresh and try again." };
 
   refresh(order.orderId);
+  if (parsed.data.status === "SHIPPED" || parsed.data.status === "DELIVERED") {
+    notifyCustomer(order.id, { kind: parsed.data.status });
+  }
   return { success: "Status updated." };
 }
 
@@ -79,13 +90,24 @@ export async function updateTracking(
   });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
 
+  const before = await prisma.order.findUnique({
+    where: { id: orderRowId },
+    select: { trackingCarrier: true, trackingNumber: true },
+  });
+  if (!before) return { error: "Order not found." };
+
   const order = await prisma.order.update({
     where: { id: orderRowId },
     data: parsed.data,
-    select: { orderId: true },
+    select: { id: true, orderId: true, status: true, trackingNumber: true, trackingCarrier: true },
   });
 
   refresh(order.orderId);
+  // Once an order has shipped, new or changed tracking details are worth an email.
+  const changed = order.trackingNumber !== before.trackingNumber || order.trackingCarrier !== before.trackingCarrier;
+  if (order.status === "SHIPPED" && order.trackingNumber && changed) {
+    notifyCustomer(order.id, { kind: "TRACKING" });
+  }
   return { success: "Tracking details saved." };
 }
 
@@ -122,6 +144,7 @@ export async function cancelOrder(
   if (!cancelled) return { error: "This order was just updated by someone else. Refresh and try again." };
 
   refresh(order.orderId);
+  notifyCustomer(order.id, { kind: "CANCELLED" });
   return {
     success:
       order.paymentStatus === "PAID"
@@ -212,6 +235,7 @@ export async function refundOrder(
   }
 
   refresh(order.orderId);
+  notifyCustomer(order.id, { kind: "REFUNDED", amount: amountPaise / 100, full: isFullRefund, method: parsed.data.method });
   return {
     success: `${isFullRefund ? "Full" : "Partial"} refund of ₹${parsed.data.amount.toLocaleString("en-IN")} recorded${parsed.data.method === "razorpay" ? " and sent via Razorpay" : ""}.`,
   };

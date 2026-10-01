@@ -112,6 +112,8 @@ export default async function ProductPage({ params }: PageProps) {
     include: { customer: { select: { name: true } } },
   });
 
+  const verifiedCount = await prisma.review.count({ where: { productId: product.id, isVerifiedPurchase: true } });
+
   const whatsappHref = whatsappLink(
     `Hello, I am interested in ${product.name} (${product.code}). Please share product details and pricing.`
   );
@@ -121,8 +123,8 @@ export default async function ProductPage({ params }: PageProps) {
     product: `${product.name} (${product.code})`,
   })}`;
 
-  // Structured data for rich results. No aggregateRating: only verified
-  // customer reviews should be marked up as ratings.
+  // Structured data for rich results. aggregateRating is only emitted when the
+  // product has real customer reviews.
   const site = getSiteUrl();
   const productUrl = `${site}/products/${product.slug}`;
   const absolute = (url: string) => (url.startsWith("/") ? `${site}${url}` : url);
@@ -136,7 +138,7 @@ export default async function ProductPage({ params }: PageProps) {
       category: product.category.name,
       image: product.images.map((image) => absolute(image.url)),
       brand: { "@type": "Brand", name: SITE_NAME },
-      // Only real, verified-buyer reviews are marked up as ratings.
+      // Only real customer reviews are marked up as ratings.
       ...(rating !== null && product.reviewCount > 0
         ? {
             aggregateRating: {
@@ -347,8 +349,10 @@ export default async function ProductPage({ params }: PageProps) {
             </h2>
             <p className="reviews-sub">
               {product.reviewCount > 0
-                ? `Based on ${product.reviewCount} verified ${product.reviewCount === 1 ? "purchase" : "purchases"}`
-                : "Reviews are written only by customers who received this product."}
+                ? `Based on ${product.reviewCount} ${product.reviewCount === 1 ? "review" : "reviews"}${
+                    verifiedCount > 0 ? ` · ${verifiedCount} from verified buyers` : ""
+                  }`
+                : "Be the first to review this product."}
             </p>
           </div>
 

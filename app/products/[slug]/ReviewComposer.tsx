@@ -7,6 +7,7 @@ import ReviewForm from "./ReviewForm";
 type Eligibility = {
   loggedIn: boolean;
   canReview: boolean;
+  verified?: boolean;
   existing: { rating: number; title: string; comment: string } | null;
 };
 
@@ -30,18 +31,23 @@ export default function ReviewComposer({ slug }: { slug: string }) {
 
   if (!state) return <div className="reviews-note skeleton" style={{ height: 72 }} aria-busy="true" />;
 
-  if (state.canReview) return <ReviewForm slug={slug} existing={state.existing} />;
+  if (state.canReview) {
+    return (
+      <>
+        <ReviewForm slug={slug} existing={state.existing} />
+        <p className="reviews-note">
+          {state.verified
+            ? "Your review will show a “Verified buyer” label because you received this product."
+            : "Your review will be posted without the “Verified buyer” label, which is only for customers who received this product."}
+        </p>
+      </>
+    );
+  }
 
   return (
     <p className="reviews-note">
-      {state.loggedIn ? (
-        "You can review this product once your order has been delivered."
-      ) : (
-        <>
-          Bought this? <Link href={`/login?callbackUrl=/products/${slug}`}>Log in</Link> after delivery to share your
-          review.
-        </>
-      )}
+      <Link href={`/login?callbackUrl=/products/${slug}`}>Log in</Link> to write a review. Don&apos;t have an account?{" "}
+      <Link href={`/register`}>Create one</Link>.
     </p>
   );
 }

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-/** Star-rating form for verified buyers (also edits their existing review). */
+/** Star-rating form for signed-in customers (also edits their existing review). */
 export default function ReviewForm({
   slug,
   existing,

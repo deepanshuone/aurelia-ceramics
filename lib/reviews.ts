@@ -1,8 +1,8 @@
 import { prisma } from "./prisma";
 
 /**
- * Only customers who have actually received a product may review it, so every
- * rating on the site is from a verified buyer.
+ * Whether the customer has actually received the product. Anyone signed in may
+ * review, but only these customers get the "Verified buyer" label.
  */
 export async function hasReceivedProduct(customerId: string, productId: string) {
   const delivered = await prisma.orderItem.findFirst({

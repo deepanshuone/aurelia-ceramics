@@ -115,6 +115,7 @@ function SearchBox({
   dark?: boolean;
 }) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [meta, setMeta] = useState<{ total: number; corrected: string | null }>({ total: 0, corrected: null });
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -135,6 +136,7 @@ function SearchBox({
         .then((res) => res.json())
         .then((data) => {
           setSuggestions(data.suggestions ?? []);
+          setMeta({ total: data.total ?? 0, corrected: data.corrected ?? null });
           setOpen(true);
         })
         .catch(() => {});
@@ -183,6 +185,7 @@ function SearchBox({
 
       {open && suggestions.length > 0 && (
         <div className="search-suggestions">
+          {meta.corrected && <p className="search-suggestions-note">Showing results for &ldquo;{meta.corrected}&rdquo;</p>}
           {suggestions.map((s) => (
             <Link
               key={s.slug}
@@ -195,6 +198,15 @@ function SearchBox({
               <strong>₹{s.price.toLocaleString("en-IN")}</strong>
             </Link>
           ))}
+          {meta.total > suggestions.length && (
+            <Link
+              href={`/products?search=${encodeURIComponent(value.trim())}`}
+              className="search-suggestions-footer"
+              onClick={() => setOpen(false)}
+            >
+              View all {meta.total} results →
+            </Link>
+          )}
         </div>
       )}
     </div>

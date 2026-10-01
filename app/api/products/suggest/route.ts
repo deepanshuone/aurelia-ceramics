@@ -1,47 +1,31 @@
-import { unstable_cache } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
+import { clientIp, rateLimit } from "../../../../lib/rate-limit";
+import { normalize, searchProducts } from "../../../../lib/search";
 
-// Suggestions per search term, cached for 5 minutes (dropped on admin product edits).
-const getSuggestions = unstable_cache(
-  async (query: string) => {
-    const products = await prisma.product.findMany({
-      where: {
-        isActive: true,
-        category: { isActive: true },
-        OR: [
-          { name: { contains: query, mode: "insensitive" } },
-          { category: { name: { contains: query, mode: "insensitive" } } },
-        ],
-      },
-      select: {
-        name: true,
-        slug: true,
-        price: true,
-        images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
-      },
-      take: 6,
-      orderBy: { createdAt: "desc" },
-    });
-
-    return products.map((product) => ({
-      name: product.name,
-      slug: product.slug,
-      price: Number(product.price),
-      image: product.images[0]?.url ?? "/placeholder-product.svg",
-    }));
-  },
-  ["product-suggestions"],
-  { revalidate: 300, tags: ["products"] }
-);
-
+// Search-as-you-type suggestions. The ranking (typos, plurals, synonyms, codes,
+// price phrases…) lives in lib/search.ts and runs over an in-memory index.
 export async function GET(request: NextRequest) {
-  // Capped so long inputs can't turn into expensive LIKE scans.
-  const query = request.nextUrl.searchParams.get("q")?.trim().slice(0, 60).toLowerCase() ?? "";
-
-  if (query.length < 2) {
-    return NextResponse.json({ suggestions: [] });
+  if (!rateLimit(`suggest:${clientIp(request.headers)}`, 300, 60 * 1000).allowed) {
+    return NextResponse.json({ suggestions: [], total: 0 }, { status: 429 });
   }
 
-  return NextResponse.json({ suggestions: await getSuggestions(query) });
+  // Capped so long inputs stay cheap; control characters are stripped by normalize().
+  const query = request.nextUrl.searchParams.get("q")?.slice(0, 60) ?? "";
+  if (normalize(query).length < 2) {
+    return NextResponse.json({ suggestions: [], total: 0 });
+  }
+
+  const result = await searchProducts(query);
+  const suggestions = result.entries.slice(0, 6).map((product) => ({
+    name: product.name,
+    slug: product.slug,
+    price: product.price,
+    image: product.image,
+    category: product.category,
+  }));
+
+  return NextResponse.json(
+    { suggestions, total: result.total, corrected: result.corrected, partial: result.partial },
+    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+  );
 }

@@ -18,6 +18,7 @@ type Props = {
 };
 
 const SORT_LABELS: Record<string, string> = {
+  relevance: "Best match",
   newest: "Newest",
   "price-asc": "Price: Low to High",
   "price-desc": "Price: High to Low",
@@ -88,13 +89,17 @@ export default function ProductFilters({ categories, current }: Props) {
     router.replace(pathname);
   }
 
+  // Searching sorts by relevance unless the shopper picks another order.
+  const defaultSort = current.search ? "relevance" : "newest";
+  const sortOptions = Object.entries(SORT_LABELS).filter(([value]) => current.search || value !== "relevance");
+
   const hasActiveFilters = Boolean(
     current.search ||
       current.category ||
       current.minPrice ||
       current.maxPrice ||
       current.inStock ||
-      (current.sort && current.sort !== "newest")
+      (current.sort && current.sort !== defaultSort)
   );
 
   return (
@@ -173,9 +178,9 @@ export default function ProductFilters({ categories, current }: Props) {
           <select
             id="sort-select"
             value={current.sort}
-            onChange={(e) => updateParams({ sort: e.target.value === "newest" ? null : e.target.value })}
+            onChange={(e) => updateParams({ sort: e.target.value === defaultSort ? null : e.target.value })}
           >
-            {Object.entries(SORT_LABELS).map(([value, label]) => (
+            {sortOptions.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>

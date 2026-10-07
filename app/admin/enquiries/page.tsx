@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PAGE_SIZE, parsePage, requireAdmin } from "../../../lib/admin";
+import { PAGE_SIZE, parsePage, requireStaff } from "../../../lib/admin";
 import { EnquiryStatus } from "../../../lib/generated/prisma/enums";
 import { formatOrderDate } from "../../../lib/order-display";
 import { prisma } from "../../../lib/prisma";
@@ -18,7 +18,7 @@ const STATUS_LABELS: Record<EnquiryStatus, string> = {
 type Search = { status?: string; page?: string };
 
 export default async function AdminEnquiriesPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireAdmin();
+  await requireStaff();
   const params = await searchParams;
 
   // Default view: everything that still needs attention.

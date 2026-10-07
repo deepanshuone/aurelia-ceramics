@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./lib/prisma";
 import { authConfig } from "./auth.config";
 import { clientIp, rateLimit } from "./lib/rate-limit";
+import { isOwnerEmail } from "./lib/owner";
 
 class TooManyAttempts extends CredentialsSignin {
   code = "rate_limited";
@@ -53,7 +54,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: customer.id,
           name: customer.name,
           email: customer.email,
-          role: customer.role,
+          // The owner (OWNER_EMAIL) is always a full admin.
+          role: isOwnerEmail(customer.email) ? "ADMIN" : customer.role,
         };
       },
     }),

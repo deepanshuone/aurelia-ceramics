@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "../../lib/admin";
+import { requireStaff } from "../../lib/admin";
 import { prisma } from "../../lib/prisma";
 import {
   ORDER_STATUS_LABELS,
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Dashboard" };
 const LOW_STOCK = 5;
 
 export default async function AdminDashboard() {
-  await requireAdmin();
+  await requireStaff();
 
   const now = new Date();
   const startOfToday = new Date(now);

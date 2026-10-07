@@ -13,6 +13,10 @@ datasource db {
 enum Role {
   CUSTOMER
   ADMIN
+  // Staff roles for the admin panel (see lib/admin.ts):
+  // EDITOR manages orders and the catalogue, VIEWER can only look.
+  EDITOR
+  VIEWER
 }
 
 enum OrderStatus {

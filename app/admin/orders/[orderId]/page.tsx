@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "../../../../lib/admin";
+import { requireStaff } from "../../../../lib/admin";
 import {
   CANCELLABLE_STATUSES,
   NEXT_STATUSES,
@@ -17,7 +17,7 @@ import { CancelForm, RefundForm, StatusForm, TrackingForm } from "./OrderActions
 export const metadata: Metadata = { title: "Order" };
 
 export default async function AdminOrderPage({ params }: { params: Promise<{ orderId: string }> }) {
-  await requireAdmin();
+  const staff = await requireStaff();
   const { orderId } = await params;
 
   const order = await prisma.order.findUnique({
@@ -40,7 +40,8 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ ord
   const remaining = Math.round((total - refunded) * 100) / 100;
   const nextStatuses = NEXT_STATUSES[order.status] ?? [];
   const cancellable = CANCELLABLE_STATUSES.includes(order.status);
-  const refundable = order.paymentStatus === "PAID" && remaining > 0;
+  // Refunds move money: full admins only.
+  const refundable = staff.role === "ADMIN" && order.paymentStatus === "PAID" && remaining > 0;
 
   return (
     <>

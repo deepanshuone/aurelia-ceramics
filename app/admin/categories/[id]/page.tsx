@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "../../../../lib/admin";
+import { requireStaff } from "../../../../lib/admin";
 import { prisma } from "../../../../lib/prisma";
 import CategoryForm from "../CategoryForm";
 
 export const metadata: Metadata = { title: "Edit category" };
 
 export default async function EditCategoryPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requireStaff();
   const { id } = await params;
 
   const category = await prisma.category.findUnique({

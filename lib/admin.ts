@@ -2,27 +2,68 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "../auth";
 import { prisma } from "./prisma";
+import { isOwnerEmail } from "./owner";
+
+export { isOwnerEmail };
 
 /**
- * Server-side admin gate for every admin page and server action.
- *
- * Middleware already blocks non-admin tokens, but a JWT keeps the role it was
- * issued with until it expires — so this re-checks the database to make
- * demotions and account blocks take effect immediately.
+ * Admin panel access levels, highest first.
+ *   ADMIN  — everything, including refunds, store settings and staff roles.
+ *   EDITOR — orders (status, tracking, cancel) and the catalogue, coupons,
+ *            enquiries and reviews. No refunds, roles or settings.
+ *   VIEWER — can open every admin page but change nothing.
  */
-export async function requireAdmin() {
+export const STAFF_ROLES = ["ADMIN", "EDITOR", "VIEWER"] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
+
+export const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Admin",
+  EDITOR: "Editor",
+  VIEWER: "Viewer",
+  CUSTOMER: "Customer",
+};
+
+export function isStaffRole(role: string | null | undefined): role is StaffRole {
+  return STAFF_ROLES.includes(role as StaffRole);
+}
+
+const RANK: Record<StaffRole, number> = { VIEWER: 1, EDITOR: 2, ADMIN: 3 };
+
+/**
+ * Server-side gate for every admin page and server action.
+ *
+ * Middleware already blocks non-staff tokens, but a JWT keeps the role it was
+ * issued with until it expires — so this re-checks the database to make
+ * role changes and account blocks take effect immediately.
+ */
+async function requireStaffRole(minimum: StaffRole) {
   const session = await auth();
   const id = session?.user?.id;
   if (!id) redirect("/login?callbackUrl=/admin");
 
-  const admin = await prisma.customer.findUnique({
+  const staff = await prisma.customer.findUnique({
     where: { id },
     select: { id: true, name: true, email: true, role: true, isActive: true },
   });
 
-  if (!admin || admin.role !== "ADMIN" || !admin.isActive) redirect("/");
-  return admin;
+  if (!staff || !staff.isActive) redirect("/");
+  // An owner listed in OWNER_EMAIL is always a full admin.
+  const role: string = isOwnerEmail(staff.email) ? "ADMIN" : staff.role;
+  if (!isStaffRole(role)) redirect("/");
+  // Signed in, but below the level this page or action needs.
+  if (RANK[role] < RANK[minimum]) redirect("/admin");
+
+  return { ...staff, role };
 }
+
+/** Any staff member (Viewer and up): for admin pages. */
+export const requireStaff = () => requireStaffRole("VIEWER");
+/** Editor and up: for actions that change orders, products and content. */
+export const requireEditor = () => requireStaffRole("EDITOR");
+/** Full admin: refunds, store settings and staff roles. */
+export const requireAdmin = () => requireStaffRole("ADMIN");
+
+export const canEdit = (role: string) => role === "ADMIN" || role === "EDITOR";
 
 /** Result shape shared by admin forms using useActionState. */
 export type ActionState = { error?: string; success?: string } | null;

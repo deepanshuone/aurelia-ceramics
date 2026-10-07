@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { auth } from "../../auth";
+import { isStaffRole } from "../../lib/admin";
 import LogoutButton from "./LogoutButton";
 
 export const metadata: Metadata = {
@@ -43,7 +44,7 @@ export default async function AccountPage() {
             <p>Manage your saved delivery addresses</p>
           </Link>
 
-          {session?.user?.role === "ADMIN" && (
+          {isStaffRole(session?.user?.role) && (
             <Link href="/admin" className="account-link-card">
               <span>Admin Panel</span>
               <p>Manage orders, products, customers and coupons</p>

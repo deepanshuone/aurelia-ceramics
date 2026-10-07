@@ -653,3 +653,19 @@ a.admin-stat:hover {
 .admin-enquiry-actions .admin-form {
   flex: 1 1 420px;
 }
+
+/* Viewer role: forms are visible for reference but can't be submitted. */
+.admin-readonly-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.admin-readonly .admin-main form:not(.admin-filters) :is(input, select, textarea) {
+  pointer-events: none;
+  background: #f6f5f2;
+}
+
+.admin-readonly .admin-main form:not(.admin-filters) :is(button, [type="submit"]),
+.admin-readonly .admin-main a.admin-btn {
+  display: none;
+}

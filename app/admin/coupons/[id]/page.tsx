@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "../../../../lib/admin";
+import { requireStaff } from "../../../../lib/admin";
 import { prisma } from "../../../../lib/prisma";
 import CouponForm from "../CouponForm";
 
@@ -19,7 +19,7 @@ export default async function EditCouponPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ created?: string }>;
 }) {
-  await requireAdmin();
+  await requireStaff();
   const { id } = await params;
   const { created } = await searchParams;
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
-import { type ActionState, firstIssue, optionalText, requireAdmin } from "../../../lib/admin";
+import { type ActionState, firstIssue, optionalText, requireAdmin, requireEditor } from "../../../lib/admin";
 import { CANCELLABLE_STATUSES as CANCELLABLE, NEXT_STATUSES } from "../../../lib/order-display";
 import { releaseOrderInventory } from "../../../lib/order-inventory";
 import { type OrderStatusEmail, sendOrderStatusEmail } from "../../../lib/order-status-emails";
@@ -40,7 +40,7 @@ export async function updateOrderStatus(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireAdmin();
+  await requireEditor();
 
   const parsed = statusSchema.safeParse({ status: formData.get("status") });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
@@ -82,7 +82,7 @@ export async function updateTracking(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireAdmin();
+  await requireEditor();
 
   const parsed = trackingSchema.safeParse({
     trackingCarrier: formData.get("trackingCarrier") ?? "",
@@ -120,7 +120,7 @@ export async function cancelOrder(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireAdmin();
+  await requireEditor();
 
   const parsed = cancelSchema.safeParse({ reason: formData.get("reason") ?? "" });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
@@ -165,6 +165,7 @@ export async function refundOrder(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
+  // Refunds move money, so they are for full admins only.
   await requireAdmin();
 
   const parsed = refundSchema.safeParse({

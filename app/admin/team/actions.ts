@@ -36,3 +36,26 @@ export async function changeAccess(customerId: string, _prev: ActionState, formD
 
   return assignRole(admin.id, customerId, parsed.data.role);
 }
+
+export type AccountSuggestion = { id: string; name: string; email: string; role: string };
+
+/** Accounts matching a name or email, for the "Give someone access" email box. */
+export async function suggestAccounts(query: string): Promise<AccountSuggestion[]> {
+  await requireAdmin();
+
+  const q = String(query ?? "").trim().slice(0, 80);
+  if (q.length < 2) return [];
+
+  return prisma.customer.findMany({
+    where: {
+      isActive: true,
+      OR: [
+        { email: { contains: q, mode: "insensitive" } },
+        { name: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    orderBy: [{ lastLoginAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    take: 8,
+    select: { id: true, name: true, email: true, role: true },
+  });
+}

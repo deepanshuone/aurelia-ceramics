@@ -359,8 +359,11 @@ model Enquiry {
 
 // Store-wide settings, edited in /admin/settings. Always a single row (id "store").
 model StoreSetting {
-  id             String   @id @default("store")
+  id                    String   @id @default("store")
   // Default processing time, in days, for orders without their own value.
-  processingDays Int      @default(3)
-  updatedAt      DateTime @updatedAt
+  processingDays        Int      @default(3)
+  // Delivery pricing in whole rupees: orders below the threshold pay the fee.
+  freeDeliveryThreshold Int      @default(999)
+  deliveryFee           Int      @default(99)
+  updatedAt             DateTime @updatedAt
 }

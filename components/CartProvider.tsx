@@ -13,6 +13,7 @@ import { useSession } from "next-auth/react";
 import {
   CartLine,
   CartResponse,
+  DeliveryRules,
   GuestCartItem,
   clearGuestCart,
   readGuestCart,
@@ -25,6 +26,8 @@ type CartContextValue = {
   items: CartLine[];
   count: number;
   loading: boolean;
+  /** Delivery pricing from Admin → Settings, for showing charges in the cart. */
+  delivery: DeliveryRules;
   notices: string[];
   dismissNotices: () => void;
   addItem: (slug: string, quantity: number) => Promise<MutationResult>;
@@ -55,7 +58,13 @@ function toGuestItems(items: CartLine[]): GuestCartItem[] {
     .map(({ slug, quantity }) => ({ slug, quantity }));
 }
 
-export default function CartProvider({ children }: { children: React.ReactNode }) {
+export default function CartProvider({
+  children,
+  delivery,
+}: {
+  children: React.ReactNode;
+  delivery: DeliveryRules;
+}) {
   const { status } = useSession();
   const isLoggedIn = status === "authenticated";
 
@@ -203,6 +212,7 @@ export default function CartProvider({ children }: { children: React.ReactNode }
       items,
       count: items.reduce((total, item) => total + (item.available ? item.quantity : 0), 0),
       loading,
+      delivery,
       notices,
       dismissNotices: () => setNotices([]),
       addItem,
@@ -211,7 +221,7 @@ export default function CartProvider({ children }: { children: React.ReactNode }
       clearCart,
       refresh: load,
     }),
-    [items, loading, notices, addItem, updateQuantity, removeItem, clearCart, load]
+    [items, loading, delivery, notices, addItem, updateQuantity, removeItem, clearCart, load]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

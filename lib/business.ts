@@ -1,5 +1,3 @@
-import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD } from "./cart";
-
 // Business details shown in the footer, contact page and policy pages.
 // Edit these in ONE place. Razorpay (and Indian e-commerce rules) expect a
 // real registered name, address, email and phone on the site before going live.
@@ -37,12 +35,10 @@ export function whatsappLink(message: string) {
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
-// Commercial terms the policy pages describe. Delivery charges come straight
-// from the cart code; the online-payment window is PAYMENT_WINDOW_MINUTES in
+// Commercial terms the policy pages describe. Delivery charges are set in
+// Admin → Settings (lib/store-settings.ts); the online-payment window is PAYMENT_WINDOW_MINUTES in
 // lib/payments.ts. The rest are operational promises — adjust to what you can meet.
 export const POLICY = {
-  freeDeliveryThreshold: FREE_DELIVERY_THRESHOLD,
-  deliveryFee: DELIVERY_FEE,
   dispatchDays: "1–3 business days",
   deliveryDays: "3–8 business days",
   damageReportHours: 48,

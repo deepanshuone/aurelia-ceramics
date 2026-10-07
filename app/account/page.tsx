@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { auth } from "../../auth";
-import { isStaffRole } from "../../lib/admin";
+import { isOwnerEmail, isStaffRole } from "../../lib/admin";
+import { prisma } from "../../lib/prisma";
 import LogoutButton from "./LogoutButton";
 
 export const metadata: Metadata = {
@@ -10,6 +11,11 @@ export const metadata: Metadata = {
 
 export default async function AccountPage() {
   const session = await auth();
+  // Read the role from the database so newly given access shows straight away.
+  const me = session?.user?.id
+    ? await prisma.customer.findUnique({ where: { id: session.user.id }, select: { role: true, email: true } })
+    : null;
+  const hasAdminAccess = !!me && (isOwnerEmail(me.email) || isStaffRole(me.role));
 
   return (
     <main className="auth-page">
@@ -44,7 +50,7 @@ export default async function AccountPage() {
             <p>Manage your saved delivery addresses</p>
           </Link>
 
-          {isStaffRole(session?.user?.role) && (
+          {hasAdminAccess && (
             <Link href="/admin" className="account-link-card">
               <span>Admin Panel</span>
               <p>Manage orders, products, customers and coupons</p>

@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/admin/coupons", label: "Coupons" },
   { href: "/admin/enquiries", label: "Enquiries" },
   { href: "/admin/reviews", label: "Reviews" },
+  { href: "/admin/team", label: "Team & Access", adminOnly: true },
   { href: "/admin/settings", label: "Settings", adminOnly: true },
 ];
 

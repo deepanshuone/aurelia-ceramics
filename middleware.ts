@@ -7,18 +7,16 @@ const { auth } = NextAuth(authConfig);
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
-  const role = req.auth?.user?.role;
 
-  const isAdminRoute = pathname.startsWith("/admin");
-  const needsLogin = ["/account", "/checkout", "/order-success"].some((prefix) =>
+  // Admin pages need a signed-in user here; the admin layout then checks the
+  // role against the database (lib/admin.ts). The role inside the login token
+  // can be up to a minute old, so checking it here would bounce someone who
+  // was just given access to the login page.
+  const needsLogin = ["/account", "/admin", "/checkout", "/order-success"].some((prefix) =>
     pathname.startsWith(prefix)
   );
 
-  // Pages re-check the exact role against the database (lib/admin.ts); this
-  // only keeps customers out. Kept inline: lib/admin.ts can't run on the edge.
-  const isStaff = role === "ADMIN" || role === "EDITOR" || role === "VIEWER";
-
-  if ((isAdminRoute && (!isLoggedIn || !isStaff)) || (needsLogin && !isLoggedIn)) {
+  if (needsLogin && !isLoggedIn) {
     const url = new URL("/login", req.nextUrl.origin);
     url.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(url);

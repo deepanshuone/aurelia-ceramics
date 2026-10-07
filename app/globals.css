@@ -4953,3 +4953,26 @@ h2 {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Order preparation progress (processing time set in /admin/settings). */
+.order-processing {
+    margin: 22px 0 0;
+}
+
+.order-processing p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: #746f67;
+}
+
+.processing-meter {
+    height: 6px;
+    background: #ece8e1;
+    overflow: hidden;
+}
+
+.processing-meter span {
+    display: block;
+    height: 100%;
+    background: #171614;
+}

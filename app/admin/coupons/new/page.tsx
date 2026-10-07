@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "../../../../lib/admin";
+import { requireStaff } from "../../../../lib/admin";
 import CouponForm from "../CouponForm";
 
 export const metadata: Metadata = { title: "New coupon" };
 
 export default async function NewCouponPage() {
-  await requireAdmin();
+  await requireStaff();
 
   return (
     <>

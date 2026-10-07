@@ -14,7 +14,11 @@ export default auth((req) => {
     pathname.startsWith(prefix)
   );
 
-  if ((isAdminRoute && (!isLoggedIn || role !== "ADMIN")) || (needsLogin && !isLoggedIn)) {
+  // Pages re-check the exact role against the database (lib/admin.ts); this
+  // only keeps customers out. Kept inline: lib/admin.ts can't run on the edge.
+  const isStaff = role === "ADMIN" || role === "EDITOR" || role === "VIEWER";
+
+  if ((isAdminRoute && (!isLoggedIn || !isStaff)) || (needsLogin && !isLoggedIn)) {
     const url = new URL("/login", req.nextUrl.origin);
     url.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(url);

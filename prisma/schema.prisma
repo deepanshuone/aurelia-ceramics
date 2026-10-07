@@ -13,6 +13,10 @@ datasource db {
 enum Role {
   CUSTOMER
   ADMIN
+  // Staff roles for the admin panel (see lib/admin.ts):
+  // EDITOR manages orders and the catalogue, VIEWER can only look.
+  EDITOR
+  VIEWER
 }
 
 enum OrderStatus {
@@ -219,6 +223,12 @@ model Order {
   // Set once the customer's confirmation email has been sent (prevents duplicates).
   confirmationEmailSentAt DateTime?
 
+  // When the order was confirmed (COD placed or online payment captured);
+  // the processing time counts from here.
+  confirmedAt     DateTime?
+  // Processing time for this order only; null uses StoreSetting.processingDays.
+  processingDays  Int?
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -329,4 +339,12 @@ model Enquiry {
   updatedAt   DateTime      @updatedAt
 
   @@index([status, createdAt])
+}
+
+// Store-wide settings, edited in /admin/settings. Always a single row (id "store").
+model StoreSetting {
+  id             String   @id @default("store")
+  // Default processing time, in days, for orders without their own value.
+  processingDays Int      @default(3)
+  updatedAt      DateTime @updatedAt
 }

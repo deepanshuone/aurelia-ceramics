@@ -12,14 +12,15 @@ const LINKS = [
   { href: "/admin/coupons", label: "Coupons" },
   { href: "/admin/enquiries", label: "Enquiries" },
   { href: "/admin/reviews", label: "Reviews" },
+  { href: "/admin/settings", label: "Settings", adminOnly: true },
 ];
 
-export default function AdminNav() {
+export default function AdminNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
 
   return (
     <nav className="admin-nav" aria-label="Admin">
-      {LINKS.map((link) => {
+      {LINKS.filter((link) => isAdmin || !link.adminOnly).map((link) => {
         const active =
           link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
         return (

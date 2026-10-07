@@ -677,3 +677,80 @@ a.admin-stat:hover {
 .admin-panel .processing-meter + .admin-hint {
   margin-bottom: 14px;
 }
+
+/* Team & Access */
+.team-hint {
+  margin-bottom: 14px;
+}
+
+.team-grant-submit {
+  display: flex;
+  align-items: flex-end;
+}
+
+.team-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-member-actions .form-error,
+.team-member-actions .admin-success {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+}
+
+.role-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.role-chip.role-admin {
+  background: #1d1d1b;
+  color: #fff;
+}
+
+.role-chip.role-editor {
+  background: #e3edf7;
+  color: #1f4f7a;
+}
+
+.role-chip.role-viewer {
+  background: #f1efe9;
+  color: #5e574c;
+}
+
+.perm-table td:not(:first-child),
+.perm-table th:not(:first-child) {
+  text-align: center;
+}
+
+.perm {
+  display: inline-block;
+  min-width: 78px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.perm.full {
+  background: #eaf4ec;
+  color: #2f6b3a;
+}
+
+.perm.view {
+  background: #e3edf7;
+  color: #1f4f7a;
+}
+
+.perm.none {
+  background: #f6f5f2;
+  color: #9a9388;
+}

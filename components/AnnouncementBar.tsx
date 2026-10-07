@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { POLICY } from "../lib/business";
+import type { DeliveryRules } from "../lib/cart";
 
 /** Thin offer strip above the header. */
-export default function AnnouncementBar() {
+export default function AnnouncementBar({ delivery }: { delivery: DeliveryRules }) {
   return (
     <div className="announcement-bar">
       <p>
-        <span>Free delivery on orders above ₹{POLICY.freeDeliveryThreshold.toLocaleString("en-IN")}</span>
+        <span>Free delivery on orders of ₹{delivery.freeDeliveryThreshold.toLocaleString("en-IN")}+</span>
         <span aria-hidden="true">·</span>
         <span>Cash on Delivery available</span>
         <span aria-hidden="true" className="announcement-extra">·</span>

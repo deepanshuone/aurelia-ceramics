@@ -11,6 +11,7 @@ import { reviewerDisplayName } from "../../../lib/reviews";
 import { formatOrderDate } from "../../../lib/order-display";
 import { SITE_NAME, getSiteUrl, jsonLd } from "../../../lib/site";
 import { POLICY, whatsappLink } from "../../../lib/business";
+import { getDeliveryRules } from "../../../lib/store-settings";
 
 // cache(): generateMetadata and the page share one query per request.
 const getProduct = cache(async (slug: string) => {
@@ -74,7 +75,7 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const [product, delivery] = await Promise.all([getProduct(slug), getDeliveryRules()]);
 
   if (!product) {
     notFound();
@@ -270,7 +271,7 @@ export default async function ProductPage({ params }: PageProps) {
             <ul className="product-assurances">
               <li>
                 <strong>Free delivery</strong>
-                <span>On orders above ₹{POLICY.freeDeliveryThreshold.toLocaleString("en-IN")}</span>
+                <span>On orders of ₹{delivery.freeDeliveryThreshold.toLocaleString("en-IN")} or more</span>
               </li>
               <li>
                 <strong>Cash on Delivery</strong>
@@ -338,8 +339,8 @@ export default async function ProductPage({ params }: PageProps) {
               {rating !== null ? (
                 <>
                   <span className="reviews-stars" aria-hidden="true">
-                    {"\u2605".repeat(Math.round(rating))}
-                    <span className="off">{"\u2605".repeat(5 - Math.round(rating))}</span>
+                    {"★".repeat(Math.round(rating))}
+                    <span className="off">{"★".repeat(5 - Math.round(rating))}</span>
                   </span>{" "}
                   {rating.toFixed(1)} out of 5
                 </>
@@ -362,8 +363,8 @@ export default async function ProductPage({ params }: PageProps) {
                 <li key={review.id}>
                   <div className="review-meta">
                     <span className="reviews-stars small" aria-label={`${review.rating} out of 5 stars`}>
-                      {"\u2605".repeat(review.rating)}
-                      <span className="off">{"\u2605".repeat(5 - review.rating)}</span>
+                      {"★".repeat(review.rating)}
+                      <span className="off">{"★".repeat(5 - review.rating)}</span>
                     </span>
                     {review.isVerifiedPurchase && <span className="verified-badge">Verified buyer</span>}
                   </div>

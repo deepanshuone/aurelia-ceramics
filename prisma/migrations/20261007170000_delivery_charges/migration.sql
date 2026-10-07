@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "StoreSetting" ADD COLUMN "freeDeliveryThreshold" INTEGER NOT NULL DEFAULT 999,
+ADD COLUMN "deliveryFee" INTEGER NOT NULL DEFAULT 99;

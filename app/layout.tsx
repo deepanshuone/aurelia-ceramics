@@ -8,6 +8,7 @@ import AnnouncementBar from '../components/AnnouncementBar';
 import WhatsAppFloat from '../components/WhatsAppFloat';
 import { whatsappLink } from '../lib/business';
 import { getNavCategories } from '../lib/nav';
+import { getDeliveryRules } from '../lib/store-settings';
 import { SITE_DESCRIPTION, SITE_NAME, getSiteUrl } from '../lib/site';
 
 // Self-hosted at build time: no render-blocking request to Google Fonts.
@@ -43,14 +44,15 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const delivery = await getDeliveryRules();
   return (
     <html lang="en" className={`${dmSans.variable} ${playfair.variable}`}>
       <body>
-        <Providers>
+        <Providers delivery={delivery}>
           <a href="#main-content" className="skip-link">
             Skip to content
           </a>
-          <AnnouncementBar />
+          <AnnouncementBar delivery={delivery} />
           <Header categories={await getNavCategories()} />
           <div id="main-content" tabIndex={-1}>
             {children}

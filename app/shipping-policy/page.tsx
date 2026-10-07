@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PolicyPage from "../../components/PolicyPage";
 import { BUSINESS, POLICY } from "../../lib/business";
+import { getDeliveryRules } from "../../lib/store-settings";
 
 export const metadata: Metadata = {
   title: "Shipping Policy",
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
 
 const rupees = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
-export default function ShippingPolicyPage() {
+export default async function ShippingPolicyPage() {
+  const delivery = await getDeliveryRules();
   return (
     <PolicyPage
       kicker="POLICIES"
@@ -28,12 +30,12 @@ export default function ShippingPolicyPage() {
         <h2>Delivery charges</h2>
         <ul>
           <li>
-            <strong>Free delivery</strong> on orders of {rupees(POLICY.freeDeliveryThreshold)} or more (product value,
+            <strong>Free delivery</strong> on orders of {rupees(delivery.freeDeliveryThreshold)} or more (product value,
             before any coupon).
           </li>
           <li>
-            A flat delivery charge of {rupees(POLICY.deliveryFee)} applies to orders below{" "}
-            {rupees(POLICY.freeDeliveryThreshold)}.
+            A flat delivery charge of {rupees(delivery.deliveryFee)} applies to orders below{" "}
+            {rupees(delivery.freeDeliveryThreshold)}.
           </li>
           <li>The exact charge is always shown at checkout before you pay.</li>
         </ul>

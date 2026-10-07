@@ -2,8 +2,9 @@ import { randomBytes } from "crypto";
 import { z } from "zod";
 import { prisma } from "./prisma";
 import { getCustomerCart } from "./cart-server";
-import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, type CartLine } from "./cart";
+import type { CartLine } from "./cart";
 import { expireStaleOrders, isOnlinePaymentConfigured } from "./payments";
+import { readDeliveryRules } from "./store-settings";
 
 export const shippingSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(100),
@@ -134,7 +135,8 @@ export async function quoteCheckout(customerId: string, couponCode?: string): Pr
   const applied = couponCode ? await resolveCoupon(couponCode, subtotal) : null;
 
   // Free delivery is judged on the merchandise value, before any coupon.
-  const delivery = subtotal >= toPaise(FREE_DELIVERY_THRESHOLD) ? 0 : toPaise(DELIVERY_FEE);
+  const rules = await readDeliveryRules();
+  const delivery = subtotal >= toPaise(rules.freeDeliveryThreshold) ? 0 : toPaise(rules.deliveryFee);
 
   // A coupon can reduce the bill but never make the order free or negative.
   const discount = Math.max(0, Math.min(applied?.discount ?? 0, subtotal + delivery - MIN_ORDER_PAISE));

@@ -6,18 +6,20 @@ import { useSession } from "next-auth/react";
 import { useCart } from "../../components/CartProvider";
 import CartSuggestions from "../../components/CartSuggestions";
 import { POLICY } from "../../lib/business";
-import { CartLine, DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, getCartTotals } from "../../lib/cart";
+import { CartLine, type DeliveryRules, getCartTotals } from "../../lib/cart";
 
 const MAX_LINE_QUANTITY = 99;
 
 /** Delivery and policy facts a shopper wants before buying (shown with an empty or filled cart). */
-function ShoppingInfo() {
+function ShoppingInfo({ delivery }: { delivery: DeliveryRules }) {
     return (
         <ul className="cart-info-strip">
             <li>
                 <strong>Free delivery</strong>
                 <span>
-                    above ₹{FREE_DELIVERY_THRESHOLD.toLocaleString("en-IN")} · else ₹{DELIVERY_FEE}
+                    {delivery.deliveryFee > 0
+                        ? `on ₹${delivery.freeDeliveryThreshold.toLocaleString("en-IN")}+ · else ₹${delivery.deliveryFee}`
+                        : "on every order"}
                 </span>
             </li>
             <li>
@@ -44,6 +46,7 @@ export default function CartPage() {
         dismissNotices,
         updateQuantity,
         removeItem,
+        delivery: deliveryRules,
     } = useCart();
 
     const { status } = useSession();
@@ -70,9 +73,11 @@ export default function CartPage() {
         run(item, () => removeItem(item.slug));
     }
 
-    const { subtotal, delivery, total } = getCartTotals(cart);
-    const amountToFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
-    const freeDeliveryProgress = Math.min(100, Math.round((subtotal / FREE_DELIVERY_THRESHOLD) * 100));
+    const { subtotal, delivery, total } = getCartTotals(cart, deliveryRules);
+    const amountToFreeDelivery =
+        deliveryRules.deliveryFee > 0 ? Math.max(0, deliveryRules.freeDeliveryThreshold - subtotal) : 0;
+    const freeDeliveryProgress =
+        amountToFreeDelivery > 0 ? Math.min(100, Math.round((subtotal / deliveryRules.freeDeliveryThreshold) * 100)) : 100;
     const hasUnavailable = cart.some((item) => !item.available);
 
     if (loading && cart.length === 0) {
@@ -109,7 +114,7 @@ export default function CartPage() {
                 </div>
 
                 <div className="cart-container">
-                    <ShoppingInfo />
+                    <ShoppingInfo delivery={deliveryRules} />
                     <CartSuggestions
                         excludeSlugs={[]}
                         needForFreeDelivery={0}
@@ -134,7 +139,7 @@ export default function CartPage() {
                     </h1>
                 </div>
 
-                <ShoppingInfo />
+                <ShoppingInfo delivery={deliveryRules} />
 
                 {notices.length > 0 && (
                     <div className="cart-notice" role="status">

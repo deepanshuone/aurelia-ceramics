@@ -653,3 +653,11 @@ a.admin-stat:hover {
 .admin-enquiry-actions .admin-form {
   flex: 1 1 420px;
 }
+
+.admin-panel .processing-meter {
+  margin: 0 0 8px;
+}
+
+.admin-panel .processing-meter + .admin-hint {
+  margin-bottom: 14px;
+}

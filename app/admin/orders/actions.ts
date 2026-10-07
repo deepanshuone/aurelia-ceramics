@@ -6,6 +6,7 @@ import { z } from "zod";
 import { type ActionState, firstIssue, optionalText, requireAdmin } from "../../../lib/admin";
 import { CANCELLABLE_STATUSES as CANCELLABLE, NEXT_STATUSES } from "../../../lib/order-display";
 import { releaseOrderInventory } from "../../../lib/order-inventory";
+import { MAX_PROCESSING_DAYS } from "../../../lib/processing";
 import { type OrderStatusEmail, sendOrderStatusEmail } from "../../../lib/order-status-emails";
 import { PaymentError, refundRazorpayPayment } from "../../../lib/payments";
 import { prisma } from "../../../lib/prisma";
@@ -70,6 +71,48 @@ export async function updateOrderStatus(
     notifyCustomer(order.id, { kind: parsed.data.status });
   }
   return { success: "Status updated." };
+}
+
+const processingSchema = z.object({
+  processingDays: z
+    .string()
+    .trim()
+    .transform((value, ctx) => {
+      // Blank means "use the store-wide processing time".
+      if (!value) return null;
+      const days = Number(value);
+      if (!Number.isInteger(days) || days < 0 || days > MAX_PROCESSING_DAYS) {
+        ctx.addIssue({ code: "custom", message: `Enter a whole number of days from 0 to ${MAX_PROCESSING_DAYS}.` });
+        return z.NEVER;
+      }
+      return days;
+    }),
+});
+
+export async function updateProcessingDays(
+  orderRowId: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = processingSchema.safeParse({ processingDays: formData.get("processingDays") ?? "" });
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+
+  const order = await prisma.order.update({
+    where: { id: orderRowId },
+    data: { processingDays: parsed.data.processingDays },
+    select: { orderId: true },
+  });
+
+  refresh(order.orderId);
+  revalidatePath(`/account/orders/${order.orderId}`);
+  return {
+    success:
+      parsed.data.processingDays === null
+        ? "This order now uses the store-wide processing time."
+        : `Processing time for this order set to ${parsed.data.processingDays} day${parsed.data.processingDays === 1 ? "" : "s"}.`,
+  };
 }
 
 const trackingSchema = z.object({

@@ -669,3 +669,11 @@ a.admin-stat:hover {
 .admin-readonly .admin-main a.admin-btn {
   display: none;
 }
+
+.admin-panel .processing-meter {
+  margin: 0 0 8px;
+}
+
+.admin-panel .processing-meter + .admin-hint {
+  margin-bottom: 14px;
+}

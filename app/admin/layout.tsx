@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className={`admin-shell${admin.role === "VIEWER" ? " admin-readonly" : ""}`}>
       <aside className="admin-sidebar">
         <p className="admin-sidebar-title">AURELIA ADMIN</p>
-        <AdminNav />
+        <AdminNav isAdmin={admin.role === "ADMIN"} />
         <p className="admin-sidebar-user">
           Signed in as
           <br />

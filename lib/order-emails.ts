@@ -1,4 +1,5 @@
 import { BUSINESS, POLICY } from "./business";
+import { getStoreProcessingDays } from "./store-settings";
 import { sendEmail } from "./email";
 import { prisma } from "./prisma";
 import { getSiteUrl } from "./site";
@@ -33,8 +34,12 @@ function paymentLine(order: OrderForEmail) {
   return { label: "Paid online", note: "Your payment has been received. Thank you!" };
 }
 
-/** Customer-facing order confirmation. */
-export function buildConfirmationEmail(order: OrderForEmail) {
+/**
+ * Customer-facing order confirmation. `processingDays` is the order's
+ * processing time (its own, else the store's); without it the email falls
+ * back to the general dispatch promise.
+ */
+export function buildConfirmationEmail(order: OrderForEmail, processingDays?: number) {
   const site = getSiteUrl();
   const firstName = (order.shippingName ?? "").trim().split(/\s+/)[0] || "there";
   const orderUrl = `${site}/account/orders/${encodeURIComponent(order.orderId)}`;
@@ -118,7 +123,13 @@ export function buildConfirmationEmail(order: OrderForEmail) {
         </td></tr>
 
         <tr><td style="padding:14px 28px 26px;font-size:13px;line-height:1.6;color:#746f67;text-align:center;">
-          Orders are dispatched within ${POLICY.dispatchDays}. Ceramics are packed with care — if anything arrives damaged,
+          ${
+            processingDays === undefined
+              ? `Orders are dispatched within ${POLICY.dispatchDays}.`
+              : processingDays === 0
+                ? "Your order will be dispatched shortly."
+                : `Your order will be ready to ship within ${processingDays} day${processingDays === 1 ? "" : "s"}.`
+          } Ceramics are packed with care — if anything arrives damaged,
           tell us within ${POLICY.damageReportHours} hours for a free replacement.
         </td></tr>
 
@@ -205,7 +216,7 @@ export async function sendOrderConfirmationEmails(orderRowId: string) {
   const order = await loadOrder(orderRowId);
   if (!order || !order.shippingEmail) return false;
 
-  const confirmation = buildConfirmationEmail(order);
+  const confirmation = buildConfirmationEmail(order, order.processingDays ?? (await getStoreProcessingDays()));
   const sent = await sendEmail({ to: order.shippingEmail, ...confirmation, replyTo: BUSINESS.email });
 
   if (!sent) {

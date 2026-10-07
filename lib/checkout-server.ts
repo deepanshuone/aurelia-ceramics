@@ -256,6 +256,7 @@ export async function placeOrder(input: {
           paymentMethod: input.paymentMethod,
           // COD orders are confirmed straight away; online orders wait for payment.
           status: input.paymentMethod === "COD" ? "CONFIRMED" : "PENDING",
+          confirmedAt: input.paymentMethod === "COD" ? new Date() : null,
           subtotal: quote.subtotal,
           discount: quote.discount,
           delivery: quote.delivery,

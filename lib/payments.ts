@@ -216,7 +216,7 @@ export async function markPaymentCaptured(input: {
 
     const confirmed = await tx.order.updateMany({
       where: { id: payment.orderId, status: "PENDING" },
-      data: { status: "CONFIRMED", paymentStatus: "PAID" },
+      data: { status: "CONFIRMED", paymentStatus: "PAID", confirmedAt: new Date() },
     });
 
     if (confirmed.count === 0) {

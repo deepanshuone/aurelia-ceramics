@@ -3693,6 +3693,44 @@ h2 {
   padding: 36px;
 }
 
+.form-notice {
+  margin: 0;
+  padding: 12px 16px;
+  background: #edf6ee;
+  border: 1px solid #b9dcbe;
+  color: #24663a;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.otp-row {
+  display: flex;
+  gap: 10px;
+}
+
+.otp-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.form .otp-row .otp-send {
+  flex: none;
+  align-self: stretch;
+  padding: 0 16px;
+  white-space: nowrap;
+  background: var(--black);
+  color: white;
+  letter-spacing: normal;
+}
+
+.form .otp-row .otp-send:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+
 .auth-switch {
   margin: 4px 0 0;
   text-align: center;

@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireStaff } from "../../../../lib/admin";
+import { requirePermission } from "../../../../lib/admin";
 import { prisma } from "../../../../lib/prisma";
 import ProductForm from "../ProductForm";
 
 export const metadata: Metadata = { title: "New product" };
 
 export default async function NewProductPage() {
-  await requireStaff();
+  await requirePermission("products", "edit");
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },
     select: { id: true, name: true, isActive: true },

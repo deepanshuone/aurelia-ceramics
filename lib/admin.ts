@@ -3,15 +3,16 @@ import { z } from "zod";
 import { auth } from "../auth";
 import { prisma } from "./prisma";
 import { isOwnerEmail } from "./owner";
+import { type AccessLevel, type Area, accessForRole, allows } from "./permissions";
 
 export { isOwnerEmail };
 
 /**
  * Admin panel access levels, highest first.
- *   ADMIN  — everything, including refunds, store settings and staff roles.
- *   EDITOR — orders (status, tracking, cancel) and the catalogue, coupons,
- *            enquiries and reviews. No refunds, roles or settings.
- *   VIEWER — can open every admin page but change nothing.
+ *   ADMIN  — everything, including Team & Access (staff roles).
+ *   EDITOR / VIEWER — per-area access an admin sets on Team & Access
+ *            (lib/permissions.ts). Defaults: Editors change orders and the
+ *            catalogue, Viewers only look.
  */
 export const STAFF_ROLES = ["ADMIN", "EDITOR", "VIEWER"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
@@ -56,14 +57,24 @@ async function requireStaffRole(minimum: StaffRole) {
   return { ...staff, role };
 }
 
-/** Any staff member (Viewer and up): for admin pages. */
-export const requireStaff = () => requireStaffRole("VIEWER");
-/** Editor and up: for actions that change orders, products and content. */
-export const requireEditor = () => requireStaffRole("EDITOR");
-/** Full admin: refunds, store settings and staff roles. */
+/** Any staff member, with their per-area access: for the admin layout and dashboard. */
+export async function requireStaff() {
+  const staff = await requireStaffRole("VIEWER");
+  return { ...staff, access: await accessForRole(staff.role) };
+}
+
+/** Full admin: Team & Access (staff roles). */
 export const requireAdmin = () => requireStaffRole("ADMIN");
 
-export const canEdit = (role: string) => role === "ADMIN" || role === "EDITOR";
+/**
+ * Gate for an admin area: "view" for its pages, "edit" for actions that
+ * change something. Uses the permissions an admin set on Team & Access.
+ */
+export async function requirePermission(area: Area, level: AccessLevel) {
+  const staff = await requireStaff();
+  if (!allows(staff.access[area], level)) redirect("/admin");
+  return staff;
+}
 
 /** Result shape shared by admin forms using useActionState. */
 export type ActionState = { error?: string; success?: string } | null;

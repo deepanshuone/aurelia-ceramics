@@ -11,7 +11,7 @@ import {
   money,
   optionalMoney,
   optionalText,
-  requireEditor,
+  requirePermission,
   slugify,
 } from "../../../lib/admin";
 import { prisma } from "../../../lib/prisma";
@@ -103,7 +103,7 @@ export async function saveProduct(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("products", "edit");
 
   const parsed = productSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstIssue(parsed.error) };
@@ -177,7 +177,7 @@ export async function saveProduct(
 }
 
 export async function deleteProduct(productId: string): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("products", "edit");
 
   const product = await prisma.product.findUnique({ where: { id: productId }, select: { slug: true } });
   if (!product) return { error: "Product not found." };

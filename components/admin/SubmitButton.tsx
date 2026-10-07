@@ -7,18 +7,25 @@ export default function SubmitButton({
   pendingLabel = "Saving…",
   className = "admin-btn",
   confirmMessage,
+  name,
+  value,
 }: {
   children: React.ReactNode;
   pendingLabel?: string;
   className?: string;
   /** Requires a second click to submit, for destructive actions. */
   confirmMessage?: string;
+  /** Submitted with the form, e.g. to tell two buttons apart. */
+  name?: string;
+  value?: string;
 }) {
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
+      name={name}
+      value={value}
       className={className}
       disabled={pending}
       onClick={(event) => {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireStaff } from "../../../../lib/admin";
+import { requirePermission } from "../../../../lib/admin";
 import {
   CANCELLABLE_STATUSES,
   NEXT_STATUSES,
@@ -19,7 +19,7 @@ import { CancelForm, ProcessingForm, RefundForm, StatusForm, TrackingForm } from
 export const metadata: Metadata = { title: "Order" };
 
 export default async function AdminOrderPage({ params }: { params: Promise<{ orderId: string }> }) {
-  const staff = await requireStaff();
+  const staff = await requirePermission("orders", "view");
   const { orderId } = await params;
 
   const order = await prisma.order.findUnique({
@@ -43,7 +43,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ ord
   const nextStatuses = NEXT_STATUSES[order.status] ?? [];
   const cancellable = CANCELLABLE_STATUSES.includes(order.status);
   // Refunds move money: full admins only.
-  const refundable = staff.role === "ADMIN" && order.paymentStatus === "PAID" && remaining > 0;
+  const refundable = staff.access.refunds === "edit" && staff.access.orders === "edit" && order.paymentStatus === "PAID" && remaining > 0;
   const storeDays = await getStoreProcessingDays();
   const processing = processingProgress(order, storeDays);
 

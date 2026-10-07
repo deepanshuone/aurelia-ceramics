@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireStaff } from "../../../lib/admin";
+import { requirePermission } from "../../../lib/admin";
 import { prisma } from "../../../lib/prisma";
 import CategoryForm from "./CategoryForm";
 
 export const metadata: Metadata = { title: "Categories" };
 
 export default async function AdminCategoriesPage() {
-  await requireStaff();
+  await requirePermission("categories", "view");
 
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },

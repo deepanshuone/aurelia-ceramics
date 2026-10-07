@@ -16,7 +16,9 @@ export const metadata: Metadata = { title: "Dashboard" };
 const LOW_STOCK = 5;
 
 export default async function AdminDashboard() {
-  await requireStaff();
+  const { access } = await requireStaff();
+  // Only show figures from areas this staff member may open.
+  const sees = (area: keyof typeof access) => access[area] !== "none";
 
   const now = new Date();
   const startOfToday = new Date(now);
@@ -68,16 +70,22 @@ export default async function AdminDashboard() {
   const overdue = toFulfil.filter((order) => processingProgress(order, storeDays, now)?.overdue).length;
 
   const stats = [
-    { label: "Revenue (30 days)", value: formatRupees(revenue._sum.total ?? 0), note: `${revenue._count} paid orders` },
-    { label: "Orders today", value: String(ordersToday) },
-    {
-      label: "To fulfil",
-      value: String(toFulfil.length),
-      href: "/admin/orders?status=CONFIRMED",
-      note: overdue > 0 ? `${overdue} past ship-by date` : undefined,
-    },
-    { label: "Customers", value: String(customers), href: "/admin/customers" },
-    { label: "New enquiries", value: String(newEnquiries), href: "/admin/enquiries?status=NEW" },
+    ...(sees("orders")
+      ? [
+          { label: "Revenue (30 days)", value: formatRupees(revenue._sum.total ?? 0), note: `${revenue._count} paid orders` },
+          { label: "Orders today", value: String(ordersToday) },
+          {
+            label: "To fulfil",
+            value: String(toFulfil.length),
+            href: "/admin/orders?status=CONFIRMED",
+            note: overdue > 0 ? `${overdue} past ship-by date` : undefined,
+          },
+        ]
+      : []),
+    ...(sees("customers") ? [{ label: "Customers", value: String(customers), href: "/admin/customers" }] : []),
+    ...(sees("enquiries")
+      ? [{ label: "New enquiries", value: String(newEnquiries), href: "/admin/enquiries?status=NEW" }]
+      : []),
   ];
 
   return (
@@ -107,7 +115,11 @@ export default async function AdminDashboard() {
         })}
       </div>
 
-      {refundPending.length > 0 && (
+      {stats.length === 0 && !sees("products") && (
+        <p className="admin-panel admin-empty">Welcome. Use the menu to open the pages you have access to.</p>
+      )}
+
+      {sees("orders") && refundPending.length > 0 && (
         <section className="admin-panel admin-alert">
           <h2>Refunds needed ({refundPending.length})</h2>
           <p>These orders were cancelled after the customer paid. Issue a refund from each order page.</p>
@@ -123,69 +135,73 @@ export default async function AdminDashboard() {
       )}
 
       <div className="admin-columns">
-        <section className="admin-panel">
-          <div className="admin-panel-head">
-            <h2>Recent orders</h2>
-            <Link href="/admin/orders">View all →</Link>
-          </div>
-
-          {recent.length === 0 ? (
-            <p className="admin-empty">No orders yet.</p>
-          ) : (
-            <div className="admin-table-wrap">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Status</th>
-                    <th className="num">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recent.map((order) => (
-                    <tr key={order.orderId}>
-                      <td>
-                        <Link href={`/admin/orders/${order.orderId}`}>{order.orderId}</Link>
-                        <small>{formatOrderDate(order.createdAt)}</small>
-                      </td>
-                      <td>{order.shippingName}</td>
-                      <td>
-                        <span className={`admin-badge status-${order.status.toLowerCase()}`}>
-                          {ORDER_STATUS_LABELS[order.status]}
-                        </span>
-                        <small>{paymentLabel(order.paymentMethod, order.paymentStatus)}</small>
-                      </td>
-                      <td className="num">{formatRupees(order.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {sees("orders") && (
+          <section className="admin-panel">
+            <div className="admin-panel-head">
+              <h2>Recent orders</h2>
+              <Link href="/admin/orders">View all →</Link>
             </div>
-          )}
-        </section>
 
-        <section className="admin-panel">
-          <div className="admin-panel-head">
-            <h2>Low stock</h2>
-            <Link href="/admin/products?stock=low">View all →</Link>
-          </div>
+            {recent.length === 0 ? (
+              <p className="admin-empty">No orders yet.</p>
+            ) : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Order</th>
+                      <th>Customer</th>
+                      <th>Status</th>
+                      <th className="num">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recent.map((order) => (
+                      <tr key={order.orderId}>
+                        <td>
+                          <Link href={`/admin/orders/${order.orderId}`}>{order.orderId}</Link>
+                          <small>{formatOrderDate(order.createdAt)}</small>
+                        </td>
+                        <td>{order.shippingName}</td>
+                        <td>
+                          <span className={`admin-badge status-${order.status.toLowerCase()}`}>
+                            {ORDER_STATUS_LABELS[order.status]}
+                          </span>
+                          <small>{paymentLabel(order.paymentMethod, order.paymentStatus)}</small>
+                        </td>
+                        <td className="num">{formatRupees(order.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
 
-          {lowStock.length === 0 ? (
-            <p className="admin-empty">All products have more than {LOW_STOCK} in stock.</p>
-          ) : (
-            <ul className="admin-list">
-              {lowStock.map((product) => (
-                <li key={product.id}>
-                  <Link href={`/admin/products/${product.id}`}>{product.name}</Link>
-                  <span className={product.stock === 0 ? "text-danger" : undefined}>
-                    {product.stock === 0 ? "Out of stock" : `${product.stock} left`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {sees("products") && (
+          <section className="admin-panel">
+            <div className="admin-panel-head">
+              <h2>Low stock</h2>
+              <Link href="/admin/products?stock=low">View all →</Link>
+            </div>
+
+            {lowStock.length === 0 ? (
+              <p className="admin-empty">All products have more than {LOW_STOCK} in stock.</p>
+            ) : (
+              <ul className="admin-list">
+                {lowStock.map((product) => (
+                  <li key={product.id}>
+                    <Link href={`/admin/products/${product.id}`}>{product.name}</Link>
+                    <span className={product.stock === 0 ? "text-danger" : undefined}>
+                      {product.stock === 0 ? "Out of stock" : `${product.stock} left`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
       </div>
     </>
   );

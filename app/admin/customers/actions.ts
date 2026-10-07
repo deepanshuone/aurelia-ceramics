@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { type ActionState, isOwnerEmail, requireAdmin } from "../../../lib/admin";
+import { type ActionState, isOwnerEmail, requirePermission } from "../../../lib/admin";
 import { prisma } from "../../../lib/prisma";
 import { ASSIGNABLE_ROLES, assignRole } from "../../../lib/staff-access";
 
@@ -17,7 +17,8 @@ export async function updateCustomer(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const admin = await requireAdmin();
+  // Blocking needs "edit" on Customers; changing roles is admin-only.
+  const admin = await requirePermission("customers", "edit");
 
   const parsed = updateSchema.safeParse({
     intent: formData.get("intent"),
@@ -26,15 +27,25 @@ export async function updateCustomer(
   if (!parsed.success) return { error: "Unknown action." };
 
   const input = parsed.data;
-  if (input.intent === "role") return assignRole(admin.id, customerId, input.role);
+  if (input.intent === "role") {
+    if (admin.role !== "ADMIN") return { error: "Only admins can change roles." };
+    return assignRole(admin.id, customerId, input.role);
+  }
 
   // Prevent an admin from locking themselves out.
   if (customerId === admin.id) {
     return { error: "You can't change your own role or block your own account." };
   }
 
-  const target = await prisma.customer.findUnique({ where: { id: customerId }, select: { email: true } });
+  const target = await prisma.customer.findUnique({
+    where: { id: customerId },
+    select: { email: true, role: true },
+  });
   if (!target) return { error: "Customer not found." };
+  // Non-admins may block shoppers only, never other staff.
+  if (admin.role !== "ADMIN" && target.role !== "CUSTOMER") {
+    return { error: "Only admins can block staff accounts." };
+  }
   // The store owner (OWNER_EMAIL) can't be demoted or blocked by anyone.
   if (isOwnerEmail(target.email)) {
     return { error: "This is the store owner's account. Its role and status can't be changed." };

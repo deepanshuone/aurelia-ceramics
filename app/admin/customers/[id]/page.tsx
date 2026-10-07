@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ROLE_LABELS, isOwnerEmail, isStaffRole, requireStaff } from "../../../../lib/admin";
+import { ROLE_LABELS, isOwnerEmail, isStaffRole, requirePermission } from "../../../../lib/admin";
 import {
   ORDER_STATUS_LABELS,
   paymentLabel,
@@ -14,7 +14,7 @@ import CustomerActions from "./CustomerActions";
 export const metadata: Metadata = { title: "Customer" };
 
 export default async function AdminCustomerPage({ params }: { params: Promise<{ id: string }> }) {
-  const admin = await requireStaff();
+  const admin = await requirePermission("customers", "view");
   const { id } = await params;
 
   const customer = await prisma.customer.findUnique({
@@ -121,14 +121,25 @@ export default async function AdminCustomerPage({ params }: { params: Promise<{ 
 
           <section className="admin-panel">
             <h2>Account</h2>
-            {admin.role !== "ADMIN" ? (
-              <p className="admin-hint">Role: {ROLE_LABELS[customer.role]}. Only admins can change roles or block accounts.</p>
+            {admin.access.customers !== "edit" ||
+            (admin.role !== "ADMIN" && customer.role !== "CUSTOMER") ? (
+              <p className="admin-hint">
+                Role: {ROLE_LABELS[customer.role]}.{" "}
+                {admin.access.customers === "edit"
+                  ? "Only admins can change roles or block staff accounts."
+                  : "You can't change roles or block accounts."}
+              </p>
             ) : customer.id === admin.id ? (
               <p className="admin-hint">This is your account. Another admin must change your role or status.</p>
             ) : isOwnerEmail(customer.email) ? (
               <p className="admin-hint">This is the store owner&apos;s account. Its role and status can&apos;t be changed.</p>
             ) : (
-              <CustomerActions customerId={customer.id} isActive={customer.isActive} role={customer.role} />
+              <CustomerActions
+                customerId={customer.id}
+                isActive={customer.isActive}
+                role={customer.role}
+                canChangeRole={admin.role === "ADMIN"}
+              />
             )}
           </section>
         </div>

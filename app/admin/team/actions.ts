@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { type ActionState, firstIssue, requireAdmin } from "../../../lib/admin";
+import { AREAS, CONFIGURABLE_ROLES, DEFAULT_PERMISSIONS, parsePermissions } from "../../../lib/permissions";
 import { prisma } from "../../../lib/prisma";
 import { ASSIGNABLE_ROLES, assignRole } from "../../../lib/staff-access";
 
@@ -58,4 +60,32 @@ export async function suggestAccounts(query: string): Promise<AccountSuggestion[
     take: 8,
     select: { id: true, name: true, email: true, role: true },
   });
+}
+
+/** Saves what Editors and Viewers may see or change in each admin area. */
+export async function savePermissions(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin();
+
+  const reset = formData.get("intent") === "reset";
+  const submitted = Object.fromEntries(
+    CONFIGURABLE_ROLES.map((role) => [
+      role,
+      Object.fromEntries(AREAS.map((area) => [area, formData.get(`${role}.${area}`)])),
+    ])
+  );
+  // Unknown values fall back to the defaults rather than failing the save.
+  const permissions = reset ? DEFAULT_PERMISSIONS : parsePermissions(submitted);
+
+  await prisma.storeSetting.upsert({
+    where: { id: "store" },
+    create: { id: "store", rolePermissions: permissions },
+    update: { rolePermissions: permissions },
+  });
+
+  revalidatePath("/admin", "layout");
+  return {
+    success: reset
+      ? "Permissions reset to the defaults."
+      : "Permissions saved. Editors and Viewers get the new access on their next click.",
+  };
 }

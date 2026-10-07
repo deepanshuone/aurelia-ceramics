@@ -3,27 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/products", label: "Products" },
-  { href: "/admin/categories", label: "Categories" },
-  { href: "/admin/customers", label: "Customers" },
-  { href: "/admin/coupons", label: "Coupons" },
-  { href: "/admin/enquiries", label: "Enquiries" },
-  { href: "/admin/reviews", label: "Reviews" },
-  { href: "/admin/team", label: "Team & Access", adminOnly: true },
-  { href: "/admin/settings", label: "Settings", adminOnly: true },
-];
+export type AdminLink = { href: string; label: string; readOnly: boolean };
 
-export default function AdminNav({ isAdmin }: { isAdmin: boolean }) {
+function isActive(href: string, pathname: string) {
+  return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+}
+
+/** Sidebar links: only the areas this staff member may open. */
+export default function AdminNav({ links }: { links: AdminLink[] }) {
   const pathname = usePathname();
 
   return (
     <nav className="admin-nav" aria-label="Admin">
-      {LINKS.filter((link) => isAdmin || !link.adminOnly).map((link) => {
-        const active =
-          link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
+      {links.map((link) => {
+        const active = isActive(link.href, pathname);
         return (
           <Link
             key={link.href}
@@ -36,5 +29,35 @@ export default function AdminNav({ isAdmin }: { isAdmin: boolean }) {
         );
       })}
     </nav>
+  );
+}
+
+/**
+ * Shows the current page read-only when this staff member only has view
+ * access to its area. Cosmetic: the server actions reject changes regardless.
+ */
+export function AdminShell({
+  links,
+  sidebar,
+  children,
+}: {
+  links: AdminLink[];
+  sidebar: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const current = links.find((link) => link.href !== "/admin" && isActive(link.href, pathname));
+  const readOnly = current?.readOnly ?? false;
+
+  return (
+    <div className={`admin-shell${readOnly ? " admin-readonly" : ""}`}>
+      <aside className="admin-sidebar">{sidebar}</aside>
+      <div className="admin-main">
+        {readOnly && (
+          <p className="admin-panel admin-readonly-note">View-only access: you can look around, but not change anything here.</p>
+        )}
+        {children}
+      </div>
+    </div>
   );
 }

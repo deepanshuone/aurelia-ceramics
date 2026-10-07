@@ -53,6 +53,7 @@ export function MemberAccessForm({ customerId, role }: { customerId: string; rol
               {level.label}
             </option>
           ))}
+          <option value="CUSTOMER">Customer (no admin access)</option>
         </select>
         <SubmitButton className="admin-btn small" pendingLabel="Saving…">
           Update
@@ -60,8 +61,12 @@ export function MemberAccessForm({ customerId, role }: { customerId: string; rol
       </form>
       <form action={action}>
         <input type="hidden" name="role" value="CUSTOMER" />
-        <SubmitButton className="admin-btn small secondary" confirmMessage="Click again to remove" pendingLabel="Removing…">
-          Remove access
+        <SubmitButton
+          className="admin-btn small danger"
+          confirmMessage="Click again: make Customer"
+          pendingLabel="Removing…"
+        >
+          Remove access (make Customer)
         </SubmitButton>
       </form>
       <FormMessage state={state} />

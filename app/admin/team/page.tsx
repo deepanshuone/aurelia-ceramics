@@ -67,6 +67,10 @@ export default async function TeamPage() {
 
       <section className="admin-panel">
         <h2>People with access</h2>
+        <p className="admin-hint team-hint">
+          To change someone&apos;s level, pick a new one and press Update. To take admin access away, choose
+          &quot;Customer&quot; or press Remove access: they go back to being a normal customer.
+        </p>
         {members.length === 0 ? (
           <p className="admin-empty">Nobody has admin access yet.</p>
         ) : (

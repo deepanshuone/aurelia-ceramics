@@ -11,6 +11,8 @@ import {
   formatRupees,
 } from "../../../lib/order-display";
 import { prisma } from "../../../lib/prisma";
+import { processingProgress } from "../../../lib/processing";
+import { getStoreProcessingDays } from "../../../lib/store-settings";
 import Pagination from "../../../components/admin/Pagination";
 
 export const metadata: Metadata = { title: "Orders" };
@@ -58,12 +60,16 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       status: true,
       paymentStatus: true,
       paymentMethod: true,
+      confirmedAt: true,
+      processingDays: true,
       total: true,
       shippingName: true,
       shippingEmail: true,
       _count: { select: { items: true } },
     },
   });
+
+  const storeDays = await getStoreProcessingDays();
 
   return (
     <>
@@ -132,6 +138,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
                       <span className={`admin-badge status-${order.status.toLowerCase()}`}>
                         {ORDER_STATUS_LABELS[order.status]}
                       </span>
+                      <ShipBy order={order} storeDays={storeDays} />
                     </td>
                     <td>
                       <span className={`admin-badge payment-${order.paymentStatus.toLowerCase()}`}>
@@ -157,5 +164,22 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
         totalPages={totalPages}
       />
     </>
+  );
+}
+
+// Under the status of an order being prepared: when it should ship, flagged once overdue.
+function ShipBy({
+  order,
+  storeDays,
+}: {
+  order: Parameters<typeof processingProgress>[0];
+  storeDays: number;
+}) {
+  const processing = processingProgress(order, storeDays);
+  if (!processing) return null;
+  return processing.overdue ? (
+    <small className="text-danger">Overdue · was due {formatOrderDate(processing.readyBy)}</small>
+  ) : (
+    <small>Ship by {formatOrderDate(processing.readyBy)}</small>
   );
 }

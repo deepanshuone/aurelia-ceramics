@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "../../lib/admin";
 import { prisma } from "../../lib/prisma";
+import { processingProgress } from "../../lib/processing";
+import { getStoreProcessingDays } from "../../lib/store-settings";
 import {
   ORDER_STATUS_LABELS,
   paymentLabel,
@@ -29,7 +31,10 @@ export default async function AdminDashboard() {
         _count: true,
       }),
       prisma.order.count({ where: { createdAt: { gte: startOfToday } } }),
-      prisma.order.count({ where: { status: { in: ["CONFIRMED", "PROCESSING"] } } }),
+      prisma.order.findMany({
+        where: { status: { in: ["CONFIRMED", "PROCESSING"] } },
+        select: { status: true, createdAt: true, confirmedAt: true, processingDays: true },
+      }),
       prisma.order.findMany({
         where: { status: "CANCELLED", paymentStatus: "PAID" },
         select: { orderId: true, total: true, createdAt: true },
@@ -59,10 +64,18 @@ export default async function AdminDashboard() {
       prisma.enquiry.count({ where: { status: "NEW" } }),
     ]);
 
+  const storeDays = await getStoreProcessingDays();
+  const overdue = toFulfil.filter((order) => processingProgress(order, storeDays, now)?.overdue).length;
+
   const stats = [
     { label: "Revenue (30 days)", value: formatRupees(revenue._sum.total ?? 0), note: `${revenue._count} paid orders` },
     { label: "Orders today", value: String(ordersToday) },
-    { label: "To fulfil", value: String(toFulfil), href: "/admin/orders?status=CONFIRMED" },
+    {
+      label: "To fulfil",
+      value: String(toFulfil.length),
+      href: "/admin/orders?status=CONFIRMED",
+      note: overdue > 0 ? `${overdue} past ship-by date` : undefined,
+    },
     { label: "Customers", value: String(customers), href: "/admin/customers" },
     { label: "New enquiries", value: String(newEnquiries), href: "/admin/enquiries?status=NEW" },
   ];

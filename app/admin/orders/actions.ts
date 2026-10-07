@@ -99,10 +99,12 @@ export async function updateProcessingDays(
   const parsed = processingSchema.safeParse({ processingDays: formData.get("processingDays") ?? "" });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
 
-  const order = await prisma.order.update({
+  const order = await prisma.order.findUnique({ where: { id: orderRowId }, select: { orderId: true } });
+  if (!order) return { error: "Order not found." };
+
+  await prisma.order.update({
     where: { id: orderRowId },
     data: { processingDays: parsed.data.processingDays },
-    select: { orderId: true },
   });
 
   refresh(order.orderId);

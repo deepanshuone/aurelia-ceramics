@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import RegisterForm from "./RegisterForm";
+import { isSmsConfigured } from "../../lib/sms";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -19,7 +20,7 @@ export default function RegisterPage() {
           <em>account.</em>
         </h1>
 
-        <RegisterForm />
+        <RegisterForm verifyPhone={isSmsConfigured()} />
       </div>
     </main>
   );

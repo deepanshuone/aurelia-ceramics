@@ -3,7 +3,8 @@
 import { useActionState } from "react";
 import FormMessage from "../../../../components/admin/FormMessage";
 import SubmitButton from "../../../../components/admin/SubmitButton";
-import { cancelOrder, refundOrder, updateOrderStatus, updateTracking } from "../actions";
+import { MAX_PROCESSING_DAYS } from "../../../../lib/processing";
+import { cancelOrder, refundOrder, updateOrderStatus, updateProcessingDays, updateTracking } from "../actions";
 
 export function StatusForm({ orderRowId, options }: { orderRowId: string; options: { value: string; label: string }[] }) {
   const [state, action] = useActionState(updateOrderStatus.bind(null, orderRowId), null);
@@ -18,6 +19,37 @@ export function StatusForm({ orderRowId, options }: { orderRowId: string; option
         ))}
       </select>
       <SubmitButton>Update status</SubmitButton>
+      <FormMessage state={state} />
+    </form>
+  );
+}
+
+export function ProcessingForm({
+  orderRowId,
+  days,
+  storeDays,
+}: {
+  orderRowId: string;
+  days: number | null;
+  storeDays: number;
+}) {
+  const [state, action] = useActionState(updateProcessingDays.bind(null, orderRowId), null);
+
+  return (
+    <form action={action} className="admin-form">
+      <label className="admin-field">
+        <span>Processing time for this order (days)</span>
+        <input
+          name="processingDays"
+          type="number"
+          min={0}
+          max={MAX_PROCESSING_DAYS}
+          step={1}
+          defaultValue={days ?? ""}
+          placeholder={`Store default: ${storeDays}`}
+        />
+      </label>
+      <SubmitButton>Save</SubmitButton>
       <FormMessage state={state} />
     </form>
   );

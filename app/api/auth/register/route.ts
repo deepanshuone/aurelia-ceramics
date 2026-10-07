@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../../../../lib/prisma";
 import { clientIp, rateLimit } from "../../../../lib/rate-limit";
+import { checkPhoneOtp, clearPhoneOtp, isPhoneTaken, OTP_MESSAGES, PHONE_PATTERN } from "../../../../lib/phone-otp";
+import { isSmsConfigured } from "../../../../lib/sms";
 
 const registerSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(100),
@@ -10,11 +12,12 @@ const registerSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\d{10}$/, "Please enter a valid 10-digit phone number."),
+    .regex(PHONE_PATTERN, "Please enter a valid 10-digit mobile number."),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters.")
     .max(72, "Password is too long."),
+  otp: z.string().trim().optional(),
 });
 
 export async function POST(request: Request) {
@@ -43,7 +46,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, email, phone, password } = parsed.data;
+  const { name, email, phone, password, otp } = parsed.data;
 
   const existing = await prisma.customer.findUnique({ where: { email } });
 
@@ -54,12 +57,33 @@ export async function POST(request: Request) {
     );
   }
 
+  if (await isPhoneTaken(phone)) {
+    return NextResponse.json(
+      { error: "An account with this mobile number already exists. Please sign in." },
+      { status: 409 }
+    );
+  }
+
+  // With SMS set up, the mobile number must be verified with an OTP first.
+  const verifyPhone = isSmsConfigured();
+  if (verifyPhone) {
+    if (!otp) {
+      return NextResponse.json({ error: "Please verify your mobile number with the OTP." }, { status: 400 });
+    }
+    const check = await checkPhoneOtp(phone, otp);
+    if (check !== "ok") {
+      return NextResponse.json({ error: OTP_MESSAGES[check] }, { status: 400 });
+    }
+  }
+
   const passwordHash = await bcrypt.hash(password, 12);
 
   const customer = await prisma.customer.create({
-    data: { name, email, phone, passwordHash },
+    data: { name, email, phone, passwordHash, phoneVerifiedAt: verifyPhone ? new Date() : null },
     select: { id: true, name: true, email: true },
   });
+
+  if (verifyPhone) await clearPhoneOtp(phone);
 
   return NextResponse.json({ customer }, { status: 201 });
 }

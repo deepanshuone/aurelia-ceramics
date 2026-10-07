@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PAGE_SIZE, parsePage, requireAdmin } from "../../../lib/admin";
+import { PAGE_SIZE, parsePage, requireStaff } from "../../../lib/admin";
 import type { Prisma } from "../../../lib/generated/prisma/client";
 import { formatRupees } from "../../../lib/order-display";
 import { prisma } from "../../../lib/prisma";
@@ -21,7 +21,7 @@ type Search = {
 };
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireAdmin();
+  await requireStaff();
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
 

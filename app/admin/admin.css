@@ -653,3 +653,160 @@ a.admin-stat:hover {
 .admin-enquiry-actions .admin-form {
   flex: 1 1 420px;
 }
+
+/* Viewer role: forms are visible for reference but can't be submitted. */
+.admin-readonly-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.admin-readonly .admin-main form:not(.admin-filters) :is(input, select, textarea) {
+  pointer-events: none;
+  background: #f6f5f2;
+}
+
+.admin-readonly .admin-main form:not(.admin-filters) :is(button, [type="submit"]),
+.admin-readonly .admin-main a.admin-btn {
+  display: none;
+}
+
+.admin-panel .processing-meter {
+  margin: 0 0 8px;
+}
+
+.admin-panel .processing-meter + .admin-hint {
+  margin-bottom: 14px;
+}
+
+/* Team & Access */
+.team-hint {
+  margin-bottom: 14px;
+}
+
+.team-grant-submit {
+  display: flex;
+  align-items: flex-end;
+}
+
+.team-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-member-actions .form-error,
+.team-member-actions .admin-success {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+}
+
+.role-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.role-chip.role-admin {
+  background: #1d1d1b;
+  color: #fff;
+}
+
+.role-chip.role-editor {
+  background: #e3edf7;
+  color: #1f4f7a;
+}
+
+.role-chip.role-viewer {
+  background: #f1efe9;
+  color: #5e574c;
+}
+
+.perm-table td:not(:first-child),
+.perm-table th:not(:first-child) {
+  text-align: center;
+}
+
+.perm {
+  display: inline-block;
+  min-width: 78px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.perm.full {
+  background: #eaf4ec;
+  color: #2f6b3a;
+}
+
+.perm.view {
+  background: #e3edf7;
+  color: #1f4f7a;
+}
+
+.perm.none {
+  background: #f6f5f2;
+  color: #9a9388;
+}
+
+.email-suggest {
+  position: relative;
+}
+
+.email-suggest-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--white);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.email-suggest-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.email-suggest-list li.active {
+  background: var(--cream);
+}
+
+.email-suggest-name {
+  font-weight: 600;
+}
+
+.email-suggest-email {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.email-suggest-role {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1f4f7a;
+}
+
+.email-suggest-list li.email-suggest-empty {
+  cursor: default;
+  color: var(--muted);
+  font-size: 13px;
+}

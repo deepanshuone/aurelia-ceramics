@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "../../../lib/admin";
+import { requireStaff } from "../../../lib/admin";
 import { formatOrderDate, formatRupees } from "../../../lib/order-display";
 import { prisma } from "../../../lib/prisma";
 
 export const metadata: Metadata = { title: "Coupons" };
 
 export default async function AdminCouponsPage() {
-  await requireAdmin();
+  await requireStaff();
 
   const coupons = await prisma.coupon.findMany({ orderBy: [{ isActive: "desc" }, { createdAt: "desc" }] });
   const now = new Date();

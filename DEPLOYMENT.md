@@ -30,6 +30,7 @@ Edit **`lib/business.ts`** — it feeds the footer, contact page and all four po
 | `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Same key id, for the browser |
 | `RAZORPAY_WEBHOOK_SECRET` | Payment confirmation webhook |
 | `CRON_SECRET` | Daily clean-up of unpaid orders (`/api/cron/expire-orders`) |
+| `MSG91_AUTH_KEY`, `MSG91_OTP_TEMPLATE_ID` | Optional: mobile OTP at sign-up (MSG91 auth key + a DLT-approved OTP template with `##OTP##`). Without them, sign-up skips the OTP |
 
 Without the Razorpay keys the shop still works — checkout offers **Cash on Delivery** only.
 

@@ -12,6 +12,8 @@ import {
 } from "../../../../lib/order-display";
 import PayNowButton from "../../../../components/PayNowButton";
 import CodFallbackButton from "../../../../components/CodFallbackButton";
+import { processingProgress } from "../../../../lib/processing";
+import { getStoreProcessingDays } from "../../../../lib/store-settings";
 import {
   PAYMENT_WINDOW_MINUTES,
   expireStaleOrders,
@@ -68,6 +70,7 @@ export default async function AccountOrderDetailPage({ params }: Params) {
   const discount = Number(order.discount);
   const delivery = Number(order.delivery);
   const refunded = Number(order.refundedAmount);
+  const processing = processingProgress(order, await getStoreProcessingDays());
 
   return (
     <main className="orders-page">
@@ -140,6 +143,19 @@ export default async function AccountOrderDetailPage({ params }: Params) {
                 </li>
               ))}
             </ol>
+          )}
+
+          {processing && (
+            <div className="order-processing">
+              <div className="processing-meter" role="progressbar" aria-valuenow={processing.percent} aria-valuemin={0} aria-valuemax={100} aria-label="Order preparation progress">
+                <span style={{ width: `${processing.percent}%` }} />
+              </div>
+              <p>
+                {processing.overdue
+                  ? "Your order is being prepared and will ship shortly."
+                  : `Your order is being prepared · ready to ship by ${formatOrderDate(processing.readyBy)}`}
+              </p>
+            </div>
           )}
         </div>
 

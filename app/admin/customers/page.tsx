@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PAGE_SIZE, parsePage, requireAdmin } from "../../../lib/admin";
+import { PAGE_SIZE, ROLE_LABELS, STAFF_ROLES, isStaffRole, parsePage, requireStaff } from "../../../lib/admin";
 import type { Prisma } from "../../../lib/generated/prisma/client";
 import { formatOrderDate, formatRupees } from "../../../lib/order-display";
 import { prisma } from "../../../lib/prisma";
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Customers" };
 type Search = { q?: string; role?: string; page?: string };
 
 export default async function AdminCustomersPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireAdmin();
+  await requireStaff();
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
 
@@ -25,7 +25,11 @@ export default async function AdminCustomersPage({ searchParams }: { searchParam
           ],
         }
       : {}),
-    ...(params.role === "ADMIN" ? { role: "ADMIN" } : params.role === "blocked" ? { isActive: false } : {}),
+    ...(params.role === "staff"
+      ? { role: { in: [...STAFF_ROLES] } }
+      : params.role === "blocked"
+        ? { isActive: false }
+        : {}),
   };
 
   const total = await prisma.customer.count({ where });
@@ -72,7 +76,7 @@ export default async function AdminCustomersPage({ searchParams }: { searchParam
         <input type="search" name="q" defaultValue={q} placeholder="Name, email or phone" aria-label="Search customers" />
         <select name="role" defaultValue={params.role ?? ""} aria-label="Filter">
           <option value="">Everyone</option>
-          <option value="ADMIN">Admins</option>
+          <option value="staff">Staff (admins, editors, viewers)</option>
           <option value="blocked">Blocked</option>
         </select>
         <button type="submit" className="admin-btn">
@@ -113,7 +117,7 @@ export default async function AdminCustomersPage({ searchParams }: { searchParam
                     <td className="num">{customer._count.orders}</td>
                     <td className="num">{formatRupees(spendById.get(customer.id) ?? 0)}</td>
                     <td>
-                      {customer.role === "ADMIN" && <span className="admin-badge on">Admin</span>}
+                      {isStaffRole(customer.role) && <span className="admin-badge on">{ROLE_LABELS[customer.role]}</span>}
                       {!customer.isActive && <span className="admin-badge off">Blocked</span>}
                     </td>
                   </tr>

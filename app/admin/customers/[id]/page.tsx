@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "../../../../lib/admin";
+import { ROLE_LABELS, isOwnerEmail, isStaffRole, requireStaff } from "../../../../lib/admin";
 import {
   ORDER_STATUS_LABELS,
   paymentLabel,
@@ -14,7 +14,7 @@ import CustomerActions from "./CustomerActions";
 export const metadata: Metadata = { title: "Customer" };
 
 export default async function AdminCustomerPage({ params }: { params: Promise<{ id: string }> }) {
-  const admin = await requireAdmin();
+  const admin = await requireStaff();
   const { id } = await params;
 
   const customer = await prisma.customer.findUnique({
@@ -42,7 +42,11 @@ export default async function AdminCustomerPage({ params }: { params: Promise<{ 
       </Link>
       <header className="admin-header">
         <h1>{customer.name}</h1>
-        {customer.role === "ADMIN" && <span className="admin-badge on">Admin</span>}
+        {isOwnerEmail(customer.email) ? (
+          <span className="admin-badge on">Owner</span>
+        ) : (
+          isStaffRole(customer.role) && <span className="admin-badge on">{ROLE_LABELS[customer.role]}</span>
+        )}
         {!customer.isActive && <span className="admin-badge off">Blocked</span>}
       </header>
 
@@ -117,14 +121,14 @@ export default async function AdminCustomerPage({ params }: { params: Promise<{ 
 
           <section className="admin-panel">
             <h2>Account</h2>
-            {customer.id === admin.id ? (
+            {admin.role !== "ADMIN" ? (
+              <p className="admin-hint">Role: {ROLE_LABELS[customer.role]}. Only admins can change roles or block accounts.</p>
+            ) : customer.id === admin.id ? (
               <p className="admin-hint">This is your account. Another admin must change your role or status.</p>
+            ) : isOwnerEmail(customer.email) ? (
+              <p className="admin-hint">This is the store owner&apos;s account. Its role and status can&apos;t be changed.</p>
             ) : (
-              <CustomerActions
-                customerId={customer.id}
-                isActive={customer.isActive}
-                isAdmin={customer.role === "ADMIN"}
-              />
+              <CustomerActions customerId={customer.id} isActive={customer.isActive} role={customer.role} />
             )}
           </section>
         </div>

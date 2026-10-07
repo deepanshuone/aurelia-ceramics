@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { type ActionState, requireAdmin } from "../../../lib/admin";
+import { type ActionState, requireEditor } from "../../../lib/admin";
 import { prisma } from "../../../lib/prisma";
 import { refreshProductRating } from "../../../lib/reviews";
 
 /** Removes a review (e.g. spam or abuse) and recalculates the product rating. */
 export async function deleteReview(reviewId: string): Promise<ActionState> {
-  await requireAdmin();
+  await requireEditor();
 
   const review = await prisma.review.findUnique({
     where: { id: reviewId },

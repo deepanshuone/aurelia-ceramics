@@ -190,7 +190,7 @@ export async function switchToCashOnDelivery(customerId: string, orderId: string
       paymentStatus: { in: ["PENDING", "FAILED"] },
       createdAt: { gte: cutoff },
     },
-    data: { paymentMethod: "COD", paymentStatus: "PENDING", status: "CONFIRMED" },
+    data: { paymentMethod: "COD", paymentStatus: "PENDING", status: "CONFIRMED", confirmedAt: new Date() },
   });
 
   const order = await prisma.order.findFirst({
@@ -250,7 +250,7 @@ export async function markPaymentCaptured(input: {
 
     const confirmed = await tx.order.updateMany({
       where: { id: payment.orderId, status: "PENDING" },
-      data: { status: "CONFIRMED", paymentStatus: "PAID" },
+      data: { status: "CONFIRMED", paymentStatus: "PAID", confirmedAt: new Date() },
     });
 
     // The customer switched to Cash on Delivery, then a payment they had

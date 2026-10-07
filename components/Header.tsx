@@ -371,7 +371,7 @@ export default function Header({ categories = [] }: { categories?: NavCategory[]
           <Link href={session ? "/account" : "/login"} onClick={() => setMenuOpen(false)}>
             {session ? "My Account" : "Sign In"}
           </Link>
-          {session?.user?.role === "ADMIN" && (
+          {["ADMIN", "EDITOR", "VIEWER"].includes(session?.user?.role ?? "") && (
             <Link href="/admin" onClick={() => setMenuOpen(false)}>
               Admin
             </Link>

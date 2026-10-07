@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import FormMessage from "../../../components/admin/FormMessage";
 import SubmitButton from "../../../components/admin/SubmitButton";
 import { changeAccess, grantAccess } from "./actions";
+import EmailSuggest from "./EmailSuggest";
 
 const LEVELS = [
   { value: "VIEWER", label: "Viewer" },
@@ -19,7 +20,7 @@ export function GrantAccessForm() {
       <div className="admin-field-row">
         <label className="admin-field grow">
           <span>Account email</span>
-          <input type="email" name="email" placeholder="name@example.com" required autoComplete="off" />
+          <EmailSuggest />
         </label>
         <label className="admin-field">
           <span>Access level</span>

@@ -59,7 +59,7 @@ export default async function TeamPage() {
       <section className="admin-panel">
         <h2>Give someone access</h2>
         <p className="admin-hint team-hint">
-          They need an account on the website first (they sign up like a customer). Then enter their email here and pick
+          They need an account on the website first (they sign up like a customer). Start typing their name or email, pick them from the list, then choose
           what they can do.
         </p>
         <GrantAccessForm />

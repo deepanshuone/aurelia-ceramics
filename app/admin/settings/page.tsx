@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "../../../lib/admin";
-import { getStoreProcessingDays } from "../../../lib/store-settings";
+import { getStoreProcessingDays, readDeliveryRules } from "../../../lib/store-settings";
 import SettingsForm from "./SettingsForm";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function AdminSettingsPage() {
   await requireAdmin();
-  const processingDays = await getStoreProcessingDays();
+  const [processingDays, delivery] = await Promise.all([getStoreProcessingDays(), readDeliveryRules()]);
 
   return (
     <>
@@ -16,8 +16,7 @@ export default async function AdminSettingsPage() {
       </header>
 
       <section className="admin-panel">
-        <h2>Order processing</h2>
-        <SettingsForm processingDays={processingDays} />
+        <SettingsForm processingDays={processingDays} delivery={delivery} />
       </section>
     </>
   );

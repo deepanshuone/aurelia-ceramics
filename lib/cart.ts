@@ -26,14 +26,26 @@ export type GuestCartItem = {
 
 const CART_KEY = "aurelia-cart";
 
-export const FREE_DELIVERY_THRESHOLD = 2000;
-export const DELIVERY_FEE = 99;
+/** Delivery pricing in rupees. Admins edit it under Admin → Settings. */
+export type DeliveryRules = {
+  /** Orders with merchandise worth this much or more ship free. */
+  freeDeliveryThreshold: number;
+  /** Flat charge on orders below the threshold. */
+  deliveryFee: number;
+};
 
-export function getCartTotals(items: CartLine[]) {
+/** Used until an admin saves their own values. */
+export const DEFAULT_DELIVERY_RULES: DeliveryRules = { freeDeliveryThreshold: 999, deliveryFee: 99 };
+
+export function deliveryCharge(subtotal: number, rules: DeliveryRules) {
+  return subtotal <= 0 || subtotal >= rules.freeDeliveryThreshold ? 0 : rules.deliveryFee;
+}
+
+export function getCartTotals(items: CartLine[], rules: DeliveryRules) {
   const subtotal = items
     .filter((item) => item.available)
     .reduce((total, item) => total + item.price * item.quantity, 0);
-  const delivery = subtotal === 0 || subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
+  const delivery = deliveryCharge(subtotal, rules);
   return { subtotal, delivery, total: subtotal + delivery };
 }
 

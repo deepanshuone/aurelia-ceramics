@@ -127,6 +127,7 @@ model Customer {
   id           String     @id @default(cuid())
   name         String
   phone        String
+  phoneVerifiedAt DateTime?
   email        String     @unique
   passwordHash String?
   role         Role       @default(CUSTOMER)
@@ -139,6 +140,21 @@ model Customer {
   wishlist     Wishlist[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+
+  @@index([phone])
+}
+
+// One-time codes sent by SMS to verify a mobile number at sign-up.
+// Only a hash of the code is stored.
+model PhoneOtp {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone])
 }
 
 model Address {

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../auth";
 import { prisma } from "../../lib/prisma";
 import PayNowButton from "../../components/PayNowButton";
+import CodFallbackButton from "../../components/CodFallbackButton";
 import { formatOrderDate, formatRupees } from "../../lib/order-display";
 import {
   EXPIRED_REASON,
@@ -178,20 +179,23 @@ export default async function OrderSuccessPage({
 
           <p className="delivery-message">
             Please pay within {PAYMENT_WINDOW_MINUTES} minutes of placing your order, or it will be
-            cancelled automatically and the items released.
+            cancelled automatically and the items released. Payment not working? Choose Cash on
+            Delivery and pay {formatRupees(order.total)} in cash or UPI when it arrives.
           </p>
 
           <div className="success-actions">
             <PayNowButton
               orderId={order.orderId}
-              label={`Pay ${formatRupees(order.total)}`}
+              label={payment === "failed" ? `Try Again · ${formatRupees(order.total)}` : `Pay ${formatRupees(order.total)}`}
               className="success-btn"
             />
 
-            <Link href={`/account/orders/${order.orderId}`} className="secondary-btn">
-              View Order
-            </Link>
+            <CodFallbackButton orderId={order.orderId} />
           </div>
+
+          <p className="delivery-message">
+            <Link href={`/account/orders/${order.orderId}`}>View order details</Link>
+          </p>
         </div>
       </main>
     );

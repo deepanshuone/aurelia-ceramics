@@ -2952,6 +2952,22 @@ h2 {
   flex: 0 1 240px;
 }
 
+/* Pay + "Pay on Delivery Instead" side by side (CodFallbackButton) */
+.order-pay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pay-now button.secondary-btn {
+  padding: 16px;
+  background: transparent;
+  border: 1px solid #111;
+  color: #111;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .success-label {
   font-size: 11px;
   letter-spacing: 2px;

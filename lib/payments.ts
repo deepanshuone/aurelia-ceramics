@@ -173,6 +173,40 @@ export async function startPayment(customerId: string, orderId: string) {
 }
 
 /**
+ * Fallback when online payment keeps failing: turns one of the customer's
+ * unpaid online orders into a confirmed Cash on Delivery order. The stock is
+ * already reserved, so nothing else changes. Returns the order's row id.
+ */
+export async function switchToCashOnDelivery(customerId: string, orderId: string) {
+  await expireStaleOrders(customerId);
+
+  const cutoff = new Date(Date.now() - PAYMENT_WINDOW_MINUTES * 60_000);
+  const switched = await prisma.order.updateMany({
+    where: {
+      orderId,
+      customerId,
+      paymentMethod: "ONLINE",
+      status: "PENDING",
+      paymentStatus: { in: ["PENDING", "FAILED"] },
+      createdAt: { gte: cutoff },
+    },
+    data: { paymentMethod: "COD", paymentStatus: "PENDING", status: "CONFIRMED", confirmedAt: new Date() },
+  });
+
+  const order = await prisma.order.findFirst({
+    where: { orderId, customerId },
+    select: { id: true, paymentMethod: true, paymentStatus: true, status: true },
+  });
+  if (!order) throw new PaymentError("Order not found.", 404);
+  if (switched.count === 1) return order.id;
+
+  // Nothing changed: explain why (a double click lands here too).
+  if (order.paymentMethod === "COD" && order.status === "CONFIRMED") return order.id;
+  if (order.paymentStatus === "PAID") throw new PaymentError("This order has already been paid.", 409);
+  throw new PaymentError("This order has expired. Please place a new order.", 409);
+}
+
+/**
  * Marks a Razorpay order as paid. Idempotent: safe to call from both the
  * browser verification route and the webhook, in either order.
  */
@@ -219,7 +253,22 @@ export async function markPaymentCaptured(input: {
       data: { status: "CONFIRMED", paymentStatus: "PAID", confirmedAt: new Date() },
     });
 
-    if (confirmed.count === 0) {
+    // The customer switched to Cash on Delivery, then a payment they had
+    // already started still went through: keep the order, now as prepaid.
+    const prepaid =
+      confirmed.count === 0
+        ? await tx.order.updateMany({
+            where: {
+              id: payment.orderId,
+              paymentMethod: "COD",
+              paymentStatus: { not: "PAID" },
+              status: { notIn: ["CANCELLED", "REFUNDED"] },
+            },
+            data: { paymentMethod: "ONLINE", paymentStatus: "PAID" },
+          })
+        : { count: 0 };
+
+    if (confirmed.count === 0 && prepaid.count === 0) {
       // The order was already cancelled (e.g. payment window expired) and its
       // stock released. Keep the money on record and flag it for a refund.
       await tx.order.update({
@@ -253,7 +302,8 @@ export async function markPaymentFailed(input: {
     }),
     // A failed attempt can still be retried on the same Razorpay order.
     prisma.order.updateMany({
-      where: { id: payment.orderId, paymentStatus: { not: "PAID" } },
+      // Not once the customer has switched the order to Cash on Delivery.
+      where: { id: payment.orderId, paymentMethod: "ONLINE", paymentStatus: { not: "PAID" } },
       data: { paymentStatus: "FAILED" },
     }),
   ]);

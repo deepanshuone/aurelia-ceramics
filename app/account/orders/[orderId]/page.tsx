@@ -11,6 +11,7 @@ import {
   formatRupees,
 } from "../../../../lib/order-display";
 import PayNowButton from "../../../../components/PayNowButton";
+import CodFallbackButton from "../../../../components/CodFallbackButton";
 import { processingProgress } from "../../../../lib/processing";
 import { getStoreProcessingDays } from "../../../../lib/store-settings";
 import {
@@ -166,10 +167,13 @@ export default async function AccountOrderDetailPage({ params }: Params) {
               </strong>
               <p>
                 Complete payment within {PAYMENT_WINDOW_MINUTES} minutes of placing the order, or it
-                will be cancelled automatically.
+                will be cancelled automatically. Or switch to Cash on Delivery and pay when it arrives.
               </p>
             </div>
-            <PayNowButton orderId={order.orderId} label={`Pay ${formatRupees(order.total)}`} />
+            <div className="order-pay-actions">
+              <PayNowButton orderId={order.orderId} label={`Pay ${formatRupees(order.total)}`} />
+              <CodFallbackButton orderId={order.orderId} />
+            </div>
           </div>
         )}
 

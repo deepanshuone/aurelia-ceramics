@@ -1,6 +1,8 @@
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
+import type { JWT } from "next-auth/jwt";
 import { prisma } from "./lib/prisma";
 import { authConfig } from "./auth.config";
 import { clientIp, rateLimit } from "./lib/rate-limit";
@@ -12,9 +14,65 @@ class TooManyAttempts extends CredentialsSignin {
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
+// How often a signed-in session is re-checked against the database. Blocking
+// an account, changing its role or changing its password takes effect within
+// this window instead of lasting until the login token expires (30 days).
+const SESSION_RECHECK_MS = 60 * 1000;
+
+// Compared against when an email has no account, so a failed login takes the
+// same time whether or not the email is registered.
+const DUMMY_HASH = bcrypt.hashSync("aurelia-timing-equaliser", 12);
+
+type SessionToken = JWT & {
+  id?: string;
+  role?: string;
+  /** See passwordFingerprint(). */
+  passwordFingerprint?: string;
+  /** When the account was last re-checked against the database (ms). */
+  checkedAt?: number;
+};
+
+/** Short fingerprint of the password hash: changes whenever the password does. */
+function passwordFingerprint(passwordHash: string) {
+  return createHash("sha256").update(passwordHash).digest("base64url").slice(0, 16);
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   secret: process.env.NEXTAUTH_SECRET,
+  callbacks: {
+    ...authConfig.callbacks,
+    // Node-only addition to the edge-safe jwt callback: periodically confirm
+    // the account is still active, with the same role and password.
+    async jwt(params) {
+      const token = (await authConfig.callbacks!.jwt!(params)) as SessionToken | null;
+      if (!token) return null;
+
+      if (params.user) {
+        token.passwordFingerprint = (params.user as { passwordFingerprint?: string }).passwordFingerprint;
+        token.checkedAt = Date.now();
+        return token;
+      }
+
+      if (!token.id || (token.checkedAt && Date.now() - token.checkedAt < SESSION_RECHECK_MS)) return token;
+
+      const customer = await prisma.customer.findUnique({
+        where: { id: token.id },
+        select: { email: true, role: true, isActive: true, passwordHash: true },
+      });
+      if (!customer?.isActive || !customer.passwordHash) return null;
+
+      const fingerprint = passwordFingerprint(customer.passwordHash);
+      // Sessions issued before this check existed carry no fingerprint; adopt
+      // the current one rather than signing everyone out.
+      if (token.passwordFingerprint && token.passwordFingerprint !== fingerprint) return null;
+
+      token.passwordFingerprint = fingerprint;
+      token.role = isOwnerEmail(customer.email) ? "ADMIN" : customer.role;
+      token.checkedAt = Date.now();
+      return token;
+    },
+  },
   providers: [
     Credentials({
       credentials: {
@@ -39,6 +97,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
 
         if (!customer || !customer.passwordHash || !customer.isActive) {
+          await bcrypt.compare(password, DUMMY_HASH);
           return null;
         }
 
@@ -56,6 +115,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: customer.email,
           // The owner (OWNER_EMAIL) is always a full admin.
           role: isOwnerEmail(customer.email) ? "ADMIN" : customer.role,
+          passwordFingerprint: passwordFingerprint(customer.passwordHash),
         };
       },
     }),

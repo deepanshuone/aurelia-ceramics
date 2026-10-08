@@ -16,6 +16,7 @@ import { POLICY, whatsappLink } from "../../../lib/business";
 import { getDeliveryRules, getDisplayProcessingDays, getShowSampleRatings } from "../../../lib/store-settings";
 import { shownRating } from "../../../lib/sample-ratings";
 import { buildProductDetails } from "../../../lib/product-details";
+import { discountPercent, savingsPerUnit } from "../../../lib/pricing";
 import { estimateDelivery, formatDeliveryDate } from "../../../lib/delivery-estimate";
 
 // cache(): generateMetadata and the page share one query per request.
@@ -95,8 +96,7 @@ export default async function ProductPage({ params }: PageProps) {
   const mrp = product.mrp ? Number(product.mrp) : null;
   // The real average, or a sample rating while Admin → Settings allows it (no review count then).
   const { rating, isSample: isSampleRating } = shownRating(product, showSampleRatings);
-  const discount =
-    mrp && mrp > price ? Math.round(((mrp - price) / mrp) * 100) : null;
+  const discount = discountPercent({ price, mrp }) || null;
 
   const details = buildProductDetails(product);
   const safeFlags = details.safety.filter((flag) => flag.value);
@@ -256,12 +256,17 @@ export default async function ProductPage({ params }: PageProps) {
             <div className="product-pricing">
               <strong>₹{price.toLocaleString("en-IN")}</strong>
 
-              {mrp && mrp > price && (
-                <del>₹{mrp.toLocaleString("en-IN")}</del>
+              {discount !== null && mrp && (
+                <>
+                  <del>₹{mrp.toLocaleString("en-IN")}</del>
+                  <span>{discount}% OFF</span>
+                </>
               )}
-
-              {discount !== null && <span>{discount}% OFF</span>}
             </div>
+
+            {discount !== null && mrp && (
+              <p className="pdp-savings">You save ₹{savingsPerUnit({ price, mrp }).toLocaleString("en-IN")}</p>
+            )}
 
             <p className="tax-note">Inclusive of applicable taxes</p>
 

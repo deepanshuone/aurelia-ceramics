@@ -6,7 +6,7 @@ import SmartImage from "../SmartImage";
 import QuickAddButton from "../QuickAddButton";
 import StarRating from "./StarRating";
 import { formatRupees } from "../../lib/order-display";
-import { discountPercent } from "./discount";
+import { discountPercent } from "../../lib/pricing";
 import type { HomeProduct } from "../../lib/home";
 
 const LOW_STOCK = 5;

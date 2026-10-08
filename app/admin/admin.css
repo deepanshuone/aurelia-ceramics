@@ -888,3 +888,43 @@ a.admin-stat:hover {
   line-height: 22px;
   cursor: pointer;
 }
+
+/* Products table: price cell with inline MRP / selling-price editor */
+.admin-price-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.admin-price-cell .admin-link.small {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.admin-price-saved {
+  color: #3f7a4f;
+}
+
+.admin-price-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.admin-price-edit label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.admin-price-edit input {
+  width: 90px;
+  padding: 4px 6px;
+  text-align: right;
+}

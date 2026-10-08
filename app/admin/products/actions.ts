@@ -218,3 +218,31 @@ export async function deleteProduct(productId: string): Promise<ActionState> {
   refreshStorefront(product.slug);
   redirect("/admin/products?deleted=1");
 }
+
+const priceSchema = z
+  .object({
+    price: money("Selling price").refine((value) => value > 0, "Selling price must be more than zero."),
+    mrp: optionalMoney("MRP"),
+  })
+  .refine((data) => data.mrp === null || data.mrp >= data.price, {
+    message: "MRP can't be lower than the selling price.",
+  });
+
+/** Quick MRP / selling-price edit from a row in the products table. */
+export async function updateProductPrice(
+  productId: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requirePermission("products", "edit");
+
+  const parsed = priceSchema.safeParse({ price: formData.get("price"), mrp: formData.get("mrp") ?? "" });
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+
+  const product = await prisma.product.findUnique({ where: { id: productId }, select: { slug: true } });
+  if (!product) return { error: "Product not found." };
+
+  await prisma.product.update({ where: { id: productId }, data: parsed.data });
+  refreshStorefront(product.slug);
+  return { success: "Saved." };
+}

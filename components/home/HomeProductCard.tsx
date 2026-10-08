@@ -4,7 +4,7 @@ import QuickAddButton from "../QuickAddButton";
 import QuickViewButton from "./QuickViewButton";
 import StarRating from "./StarRating";
 import { formatRupees } from "../../lib/order-display";
-import { discountPercent } from "./discount";
+import { discountPercent } from "../../lib/pricing";
 import type { HomeProduct } from "../../lib/home";
 
 /** Homepage product card: photo, rating, price, discount, Add to cart and Quick View. */
@@ -36,7 +36,12 @@ export default function HomeProductCard({ product, badge }: { product: HomeProdu
         {product.rating !== null && <StarRating rating={product.rating} count={product.reviewCount || undefined} />}
         <div className="home-card-price">
           <strong>{formatRupees(product.price)}</strong>
-          {off > 0 && product.mrp && <s>{formatRupees(product.mrp)}</s>}
+          {off > 0 && product.mrp && (
+            <>
+              <s>{formatRupees(product.mrp)}</s>
+              <span className="home-card-off">{off}% off</span>
+            </>
+          )}
         </div>
       </div>
 

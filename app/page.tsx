@@ -3,6 +3,7 @@ import Link from "next/link";
 import SmartImage from "../components/SmartImage";
 import { prisma } from "../lib/prisma";
 import { formatRupees } from "../lib/order-display";
+import { discountPercent } from "../lib/pricing";
 import { SITE_DESCRIPTION, SITE_NAME, getSiteUrl, jsonLd } from "../lib/site";
 import { getBestSellers, getCatalogueStats, getNewArrivals } from "../lib/home";
 import { getDeliveryRules } from "../lib/store-settings";
@@ -282,7 +283,10 @@ export default async function Home() {
           </div>
 
           <div className="product-grid featured-grid">
-            {featured.map((product) => (
+            {featured.map((product) => {
+              const mrp = product.mrp ? Number(product.mrp) : null;
+              const off = discountPercent({ price: Number(product.price), mrp });
+              return (
               <Link href={`/products/${product.slug}`} className="product-card" key={product.slug}>
                 <div className="product-image">
                   <SmartImage
@@ -299,13 +303,17 @@ export default async function Home() {
                   <h3>{product.name}</h3>
                   <strong className="product-price">
                     {formatRupees(product.price)}
-                    {product.mrp && Number(product.mrp) > Number(product.price) && (
-                      <s>{formatRupees(product.mrp)}</s>
+                    {off > 0 && mrp && (
+                      <>
+                        <s>{formatRupees(mrp)}</s>
+                        <span className="product-off">{off}% off</span>
+                      </>
                     )}
                   </strong>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

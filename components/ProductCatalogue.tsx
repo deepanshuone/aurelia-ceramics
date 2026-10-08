@@ -2,6 +2,7 @@ import Link from "next/link";
 import SmartImage from "./SmartImage";
 import QuickAddButton from "./QuickAddButton";
 import StarRating from "./home/StarRating";
+import { discountPercent } from "../lib/pricing";
 
 type Product = {
   id: string;
@@ -28,7 +29,9 @@ type Props = {
 export default function ProductCatalogue({ products }: Props) {
   return (
     <div className="catalogue-grid">
-      {products.map((product) => (
+      {products.map((product) => {
+        const off = discountPercent(product);
+        return (
         <article className="catalogue-card" key={product.slug}>
           <Link href={`/products/${product.slug}`}>
             <div className="catalogue-image">
@@ -37,12 +40,7 @@ export default function ProductCatalogue({ products }: Props) {
               {product.stock <= 0 ? (
                 <span className="catalogue-stock-badge">Out of Stock</span>
               ) : (
-                product.mrp &&
-                product.mrp > product.price && (
-                  <span className="catalogue-discount-badge">
-                    {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% OFF
-                  </span>
-                )
+                off > 0 && <span className="catalogue-discount-badge">{off}% OFF</span>
               )}
 
               <span className="catalogue-arrow">↗</span>
@@ -60,8 +58,11 @@ export default function ProductCatalogue({ products }: Props) {
 
           <div className="catalogue-price">
             <strong>₹{product.price.toLocaleString("en-IN")}</strong>
-            {product.mrp && product.mrp > product.price && (
-              <del>₹{product.mrp.toLocaleString("en-IN")}</del>
+            {off > 0 && product.mrp && (
+              <>
+                <del>₹{product.mrp.toLocaleString("en-IN")}</del>
+                <span className="catalogue-off">{off}% off</span>
+              </>
             )}
           </div>
 
@@ -76,7 +77,8 @@ export default function ProductCatalogue({ products }: Props) {
             </Link>
           </div>
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 }

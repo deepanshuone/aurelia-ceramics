@@ -47,6 +47,6 @@ export const POLICY = {
   deliveryDays: `${TRANSIT_DAYS.min}–${TRANSIT_DAYS.max} business days`,
   transitDays: TRANSIT_DAYS,
   damageReportHours: 48,
-  returnDays: 7,
+  returnHours: 48,
   refundDays: "5–7 business days",
 } as const;

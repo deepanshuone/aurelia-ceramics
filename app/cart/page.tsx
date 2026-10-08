@@ -8,6 +8,7 @@ import CartSuggestions from "../../components/CartSuggestions";
 import CheckoutSteps from "../../components/CheckoutSteps";
 import { POLICY } from "../../lib/business";
 import { CartLine, type DeliveryRules, getCartTotals } from "../../lib/cart";
+import { savingsPerUnit } from "../../lib/pricing";
 
 const MAX_LINE_QUANTITY = 99;
 
@@ -75,6 +76,9 @@ export default function CartPage() {
     }
 
     const { subtotal, delivery, total } = getCartTotals(cart, deliveryRules);
+    const mrpSavings = cart
+        .filter((item) => item.available)
+        .reduce((sum, item) => sum + Math.round(savingsPerUnit(item) * item.quantity * 100), 0) / 100;
     const amountToFreeDelivery =
         deliveryRules.deliveryFee > 0 ? Math.max(0, deliveryRules.freeDeliveryThreshold - subtotal) : 0;
     const freeDeliveryProgress =
@@ -192,6 +196,12 @@ export default function CartPage() {
                                             ₹{item.price.toLocaleString("en-IN")}
                                         </strong>
 
+                                        {item.mrp && item.mrp > item.price && (
+                                            <del className="cart-item-mrp">
+                                                ₹{item.mrp.toLocaleString("en-IN")}
+                                            </del>
+                                        )}
+
                                         {!item.available ? (
                                             <span className="cart-stock-note out">
                                                 Out of stock — remove to continue
@@ -287,6 +297,12 @@ export default function CartPage() {
                                     : `₹${delivery}`}
                             </strong>
                         </div>
+
+                        {mrpSavings > 0 && (
+                            <p className="summary-savings">
+                                You save ₹{mrpSavings.toLocaleString("en-IN")} on MRP
+                            </p>
+                        )}
 
                         <div className="summary-line" />
 

@@ -554,3 +554,9 @@
   align-items: center;
   gap: 28px;
 }
+
+.home-card-off {
+  color: #3f7a4f;
+  font-size: 12px;
+  font-weight: 600;
+}

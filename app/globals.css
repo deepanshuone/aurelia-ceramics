@@ -5228,3 +5228,31 @@ h2 {
   margin-bottom: 24px;
   text-align: center;
 }
+
+/* Discount off MRP, next to struck-through prices */
+.catalogue-off,
+.product-info .product-price .product-off {
+  color: #3f7a4f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pdp-savings {
+  margin-top: 8px;
+  color: #3f7a4f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cart-item-mrp {
+  margin-left: 8px;
+  color: #6b665e;
+  font-size: 12px;
+}
+
+.summary-savings {
+  margin: 4px 0 0;
+  color: #3f7a4f;
+  font-size: 13px;
+  font-weight: 600;
+}

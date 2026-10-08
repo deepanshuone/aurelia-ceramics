@@ -5,6 +5,7 @@ import FormMessage from "../../../components/admin/FormMessage";
 import SubmitButton from "../../../components/admin/SubmitButton";
 import { deleteProduct, saveProduct } from "./actions";
 import type { ProductDetailValues } from "./detail-values";
+import PriceFields from "./PriceFields";
 
 export type ProductFormValues = {
   id: string | null;
@@ -85,15 +86,9 @@ export default function ProductForm({
           </label>
         </div>
 
+        <PriceFields price={values.price} mrp={values.mrp} />
+
         <div className="admin-field-row">
-          <label className="admin-field">
-            <span>Price (₹) *</span>
-            <input name="price" type="number" step="0.01" min="0.01" defaultValue={values.price} required />
-          </label>
-          <label className="admin-field">
-            <span>MRP (₹)</span>
-            <input name="mrp" type="number" step="0.01" min="0" defaultValue={values.mrp} placeholder="Optional" />
-          </label>
           <label className="admin-field">
             <span>Stock *</span>
             <input name="stock" type="number" step="1" min="0" defaultValue={values.stock} required />

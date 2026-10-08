@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PAGE_SIZE, parsePage, requirePermission } from "../../../lib/admin";
 import type { Prisma } from "../../../lib/generated/prisma/client";
-import { formatRupees } from "../../../lib/order-display";
 import { prisma } from "../../../lib/prisma";
 import Pagination from "../../../components/admin/Pagination";
 import DeleteProductButton from "./DeleteProductButton";
+import QuickPriceEdit from "./QuickPriceEdit";
+import { allows } from "../../../lib/permissions";
 
 export const metadata: Metadata = { title: "Products" };
 
@@ -21,7 +22,8 @@ type Search = {
 };
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requirePermission("products", "view");
+  const staff = await requirePermission("products", "view");
+  const canEdit = allows(staff.access.products, "edit");
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
 
@@ -60,6 +62,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       name: true,
       code: true,
       price: true,
+      mrp: true,
       stock: true,
       isActive: true,
       isFeatured: true,
@@ -120,7 +123,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                   <th aria-label="Image" />
                   <th>Product</th>
                   <th>Category</th>
-                  <th className="num">Price</th>
+                  <th className="num">Price (MRP · off)</th>
                   <th className="num">Stock</th>
                   <th>Visibility</th>
                   <th aria-label="Actions" />
@@ -141,7 +144,14 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                       <small>{product.code}</small>
                     </td>
                     <td>{product.category.name}</td>
-                    <td className="num">{formatRupees(product.price)}</td>
+                    <td className="num">
+                      <QuickPriceEdit
+                        productId={product.id}
+                        price={Number(product.price)}
+                        mrp={product.mrp ? Number(product.mrp) : null}
+                        canEdit={canEdit}
+                      />
+                    </td>
                     <td className={`num${product.stock <= LOW_STOCK ? " text-danger" : ""}`}>{product.stock}</td>
                     <td>
                       <span className={`admin-badge ${product.isActive ? "on" : "off"}`}>

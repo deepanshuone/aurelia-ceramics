@@ -5,6 +5,7 @@ import { prisma } from "../../../../lib/prisma";
 import { clientIp, rateLimit } from "../../../../lib/rate-limit";
 import { checkPhoneOtp, clearPhoneOtp, isPhoneTaken, OTP_MESSAGES, PHONE_PATTERN } from "../../../../lib/phone-otp";
 import { isSmsConfigured } from "../../../../lib/sms";
+import { CAPTCHA_ERROR, createSignupTicket, verifyCaptcha } from "../../../../lib/captcha";
 
 const registerSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(100),
@@ -18,10 +19,12 @@ const registerSchema = z.object({
     .min(8, "Password must be at least 8 characters.")
     .max(72, "Password is too long."),
   otp: z.string().trim().optional(),
+  captchaToken: z.string().optional(),
 });
 
 export async function POST(request: Request) {
-  const limit = rateLimit(`register:${clientIp(request.headers)}`, 5, 60 * 60 * 1000);
+  const ip = clientIp(request.headers);
+  const limit = rateLimit(`register:${ip}`, 5, 60 * 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many sign-up attempts. Please try again later." },
@@ -46,7 +49,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, email, phone, password, otp } = parsed.data;
+  const { name, email, phone, password, otp, captchaToken } = parsed.data;
+
+  if (!(await verifyCaptcha(captchaToken, ip))) {
+    return NextResponse.json({ error: CAPTCHA_ERROR }, { status: 400 });
+  }
 
   const existing = await prisma.customer.findUnique({ where: { email } });
 
@@ -85,5 +92,5 @@ export async function POST(request: Request) {
 
   if (verifyPhone) await clearPhoneOtp(phone);
 
-  return NextResponse.json({ customer }, { status: 201 });
+  return NextResponse.json({ customer, signupTicket: createSignupTicket(customer.email) }, { status: 201 });
 }

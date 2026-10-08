@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Captcha, { captchaEnabled, type CaptchaHandle } from "../../components/Captcha";
 
 export default function RegisterForm({ verifyPhone }: { verifyPhone: boolean }) {
   const router = useRouter();
@@ -20,6 +21,8 @@ export default function RegisterForm({ verifyPhone }: { verifyPhone: boolean }) 
   const [otpNotice, setOtpNotice] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [resendIn, setResendIn] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captcha = useRef<CaptchaHandle>(null);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -36,14 +39,20 @@ export default function RegisterForm({ verifyPhone }: { verifyPhone: boolean }) 
       setError("Please enter a valid 10-digit mobile number.");
       return;
     }
+    if (captchaEnabled && !captchaToken) {
+      setError("Please complete the security check first.");
+      return;
+    }
     setSendingOtp(true);
     const res = await fetch("/api/auth/phone-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, captchaToken }),
     });
     const data = await res.json().catch(() => ({}));
     setSendingOtp(false);
+    // The token is spent; get a fresh one for the next request.
+    captcha.current?.reset();
     if (!res.ok) {
       setError(data.error ?? "We couldn't send the OTP. Please try again.");
       return;
@@ -88,18 +97,24 @@ export default function RegisterForm({ verifyPhone }: { verifyPhone: boolean }) 
       return;
     }
 
+    if (captchaEnabled && !captchaToken) {
+      setError("Please complete the security check.");
+      return;
+    }
+
     setLoading(true);
 
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, phone, password, otp: verifyPhone ? otp : undefined }),
+      body: JSON.stringify({ name, email, phone, password, otp: verifyPhone ? otp : undefined, captchaToken }),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
       setLoading(false);
+      captcha.current?.reset();
       setError(data.error ?? "Something went wrong. Please try again.");
       return;
     }
@@ -107,6 +122,7 @@ export default function RegisterForm({ verifyPhone }: { verifyPhone: boolean }) 
     const result = await signIn("credentials", {
       email: email.trim(),
       password,
+      signupTicket: data.signupTicket,
       redirect: false,
     });
 
@@ -204,6 +220,8 @@ export default function RegisterForm({ verifyPhone }: { verifyPhone: boolean }) 
           autoComplete="new-password"
         />
       </label>
+
+      <Captcha ref={captcha} onToken={setCaptchaToken} />
 
       <button className="button dark" type="submit" disabled={loading}>
         {loading ? "Creating account..." : "Create Account →"}

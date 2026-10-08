@@ -3666,6 +3666,11 @@ h2 {
   color: white;
 }
 
+/* Turnstile bot check; reserves its height so the form doesn't jump. */
+.captcha {
+  min-height: 65px;
+}
+
 .form-error {
   margin: 0;
   padding: 12px 16px;

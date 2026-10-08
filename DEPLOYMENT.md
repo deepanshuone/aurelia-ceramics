@@ -31,6 +31,7 @@ Edit **`lib/business.ts`** — it feeds the footer, contact page and all four po
 | `RAZORPAY_WEBHOOK_SECRET` | Payment confirmation webhook |
 | `CRON_SECRET` | Daily clean-up of unpaid orders (`/api/cron/expire-orders`) |
 | `MSG91_AUTH_KEY`, `MSG91_OTP_TEMPLATE_ID` | Optional: mobile OTP at sign-up (MSG91 auth key + a DLT-approved OTP template with `##OTP##`). Without them, sign-up skips the OTP |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Optional: bot check (Cloudflare Turnstile) on login, sign-up and the sign-up OTP. Free at dash.cloudflare.com → Turnstile → Add widget (add your domain and `localhost`). Without both, the check is skipped |
 
 Without the Razorpay keys the shop still works — checkout offers **Cash on Delivery** only.
 

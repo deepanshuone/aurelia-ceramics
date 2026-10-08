@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { safeRedirectPath } from "../../lib/site";
+import Captcha, { captchaEnabled, type CaptchaHandle } from "../../components/Captcha";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captcha = useRef<CaptchaHandle>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,21 +29,30 @@ export default function LoginForm() {
       return;
     }
 
+    if (captchaEnabled && !captchaToken) {
+      setError("Please complete the security check.");
+      return;
+    }
+
     setLoading(true);
 
     const result = await signIn("credentials", {
       email: email.trim(),
       password,
+      captchaToken,
       redirect: false,
     });
 
     setLoading(false);
 
     if (!result || result.error) {
+      captcha.current?.reset();
       setError(
         result?.code === "rate_limited"
           ? "Too many login attempts. Please wait 15 minutes and try again."
-          : "Invalid email or password."
+          : result?.code === "captcha"
+            ? "Security check failed. Please try again."
+            : "Invalid email or password."
       );
       return;
     }
@@ -78,6 +90,8 @@ export default function LoginForm() {
       <p className="auth-switch" style={{ textAlign: "right", margin: 0 }}>
         <Link href="/forgot-password">Forgot password?</Link>
       </p>
+
+      <Captcha ref={captcha} onToken={setCaptchaToken} />
 
       <button className="button dark" type="submit" disabled={loading}>
         {loading ? "Signing in..." : "Sign In →"}

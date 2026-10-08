@@ -7,9 +7,14 @@ import { prisma } from "./lib/prisma";
 import { authConfig } from "./auth.config";
 import { clientIp, rateLimit } from "./lib/rate-limit";
 import { isOwnerEmail } from "./lib/owner";
+import { isValidSignupTicket, verifyCaptcha } from "./lib/captcha";
 
 class TooManyAttempts extends CredentialsSignin {
   code = "rate_limited";
+}
+
+class CaptchaFailed extends CredentialsSignin {
+  code = "captcha";
 }
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
@@ -78,6 +83,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        captchaToken: {},
+        signupTicket: {},
       },
       async authorize(credentials, request) {
         const email = credentials?.email;
@@ -91,6 +98,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const byEmail = rateLimit(`login:email:${email.toLowerCase()}`, 10, FIFTEEN_MINUTES);
         const byIp = rateLimit(`login:ip:${clientIp(request.headers)}`, 30, FIFTEEN_MINUTES);
         if (!byEmail.allowed || !byIp.allowed) throw new TooManyAttempts();
+
+        // Bot check, skipped for the automatic sign-in right after sign-up
+        // (which already passed one; see lib/captcha.ts).
+        const ip = clientIp(request.headers);
+        if (
+          !isValidSignupTicket(credentials?.signupTicket, email) &&
+          !(await verifyCaptcha(credentials?.captchaToken, ip))
+        ) {
+          throw new CaptchaFailed();
+        }
 
         const customer = await prisma.customer.findUnique({
           where: { email: email.toLowerCase() },

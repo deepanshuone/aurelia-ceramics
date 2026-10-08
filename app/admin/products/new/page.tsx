@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requirePermission } from "../../../../lib/admin";
 import { prisma } from "../../../../lib/prisma";
 import ProductForm from "../ProductForm";
+import { EMPTY_DETAILS } from "../detail-values";
 
 export const metadata: Metadata = { title: "New product" };
 
@@ -41,6 +42,7 @@ export default async function NewProductPage() {
             description: "",
             specifications: "",
             images: "",
+            details: EMPTY_DETAILS,
             isActive: true,
             isFeatured: false,
             orderCount: 0,

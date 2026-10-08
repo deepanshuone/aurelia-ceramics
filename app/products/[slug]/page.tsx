@@ -4,14 +4,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "../../../lib/prisma";
 import ProductPurchase from "./ProductPurchase";
-import SmartImage from "../../../components/SmartImage";
+import ProductGallery from "./ProductGallery";
+import "./product-page.css";
 import ProductCatalogue from "../../../components/ProductCatalogue";
 import ReviewComposer from "./ReviewComposer";
-import { reviewerDisplayName } from "../../../lib/reviews";
+import ReviewList from "./ReviewList";
+import { reviewPhotoUrl, reviewerDisplayName } from "../../../lib/reviews";
 import { formatOrderDate } from "../../../lib/order-display";
 import { SITE_NAME, getSiteUrl, jsonLd } from "../../../lib/site";
 import { POLICY, whatsappLink } from "../../../lib/business";
-import { getDeliveryRules } from "../../../lib/store-settings";
+import { getDeliveryRules, getDisplayProcessingDays } from "../../../lib/store-settings";
+import { buildProductDetails } from "../../../lib/product-details";
+import { estimateDelivery, formatDeliveryDate } from "../../../lib/delivery-estimate";
 
 // cache(): generateMetadata and the page share one query per request.
 const getProduct = cache(async (slug: string) => {
@@ -75,7 +79,11 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;
-  const [product, delivery] = await Promise.all([getProduct(slug), getDeliveryRules()]);
+  const [product, delivery, processingDays] = await Promise.all([
+    getProduct(slug),
+    getDeliveryRules(),
+    getDisplayProcessingDays(),
+  ]);
 
   if (!product) {
     notFound();
@@ -87,11 +95,22 @@ export default async function ProductPage({ params }: PageProps) {
   const discount =
     mrp && mrp > price ? Math.round(((mrp - price) / mrp) * 100) : null;
 
-  const specifications = Array.isArray(product.specifications)
-    ? (product.specifications as [string, string][])
-    : null;
+  const details = buildProductDetails(product);
+  const safeFlags = details.safety.filter((flag) => flag.value);
 
   const mainImage = product.images[0]?.url ?? "/placeholder-product.svg";
+  const galleryImages =
+    product.images.length > 0
+      ? product.images.map((image, i) => ({
+          url: image.url,
+          alt: image.alt ? `${image.alt} — photo ${i + 1}` : `${product.name} — photo ${i + 1}`,
+        }))
+      : [{ url: mainImage, alt: product.name }];
+
+  // Estimated from the store's processing time plus courier transit time. The
+  // page is cached for up to 10 minutes, so the dates are at most that stale.
+  const eta = estimateDelivery(processingDays);
+  const freeDelivery = price >= delivery.freeDeliveryThreshold;
 
   const relatedProducts = await prisma.product.findMany({
     where: {
@@ -100,20 +119,29 @@ export default async function ProductPage({ params }: PageProps) {
       NOT: { id: product.id },
     },
     include: { images: { orderBy: { sortOrder: "asc" }, take: 1 } },
-    orderBy: { isFeatured: "desc" },
+    orderBy: [{ isFeatured: "desc" }, { reviewCount: "desc" }],
     take: 4,
   });
 
   // Public reviews. Whether *this* visitor may write one is checked in the
   // browser (ReviewComposer), so the page itself can be cached.
-  const reviews = await prisma.review.findMany({
-    where: { productId: product.id },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    include: { customer: { select: { name: true } } },
-  });
-
-  const verifiedCount = await prisma.review.count({ where: { productId: product.id, isVerifiedPurchase: true } });
+  const [reviews, verifiedCount, ratingGroups] = await Promise.all([
+    prisma.review.findMany({
+      where: { productId: product.id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        customer: { select: { name: true } },
+        photos: { orderBy: { sortOrder: "asc" }, select: { id: true } },
+      },
+    }),
+    prisma.review.count({ where: { productId: product.id, isVerifiedPurchase: true } }),
+    prisma.review.groupBy({ by: ["rating"], where: { productId: product.id }, _count: true }),
+  ]);
+  const ratingCounts = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    count: ratingGroups.find((group) => group.rating === star)?._count ?? 0,
+  }));
 
   const whatsappHref = whatsappLink(
     `Hello, I am interested in ${product.name} (${product.code}). Please share product details and pricing.`
@@ -197,20 +225,8 @@ export default async function ProductPage({ params }: PageProps) {
       {/* PRODUCT */}
       <section className="product-detail">
         <div className="product-container product-detail-grid">
-          {/* IMAGE */}
-          <div className="product-detail-image">
-            <SmartImage
-              src={mainImage}
-              alt={product.images[0]?.alt ?? product.name}
-              fill
-              priority
-              sizes="(max-width: 900px) 100vw, 50vw"
-            />
-
-            {discount !== null && (
-              <span className="product-discount">{discount}% OFF</span>
-            )}
-          </div>
+          {/* PHOTOS */}
+          <ProductGallery images={galleryImages} badge={discount !== null ? `${discount}% OFF` : null} />
 
           {/* INFORMATION */}
           <div className="product-detail-info">
@@ -244,6 +260,14 @@ export default async function ProductPage({ params }: PageProps) {
 
             <p className="tax-note">Inclusive of applicable taxes</p>
 
+            {safeFlags.length > 0 && (
+              <ul className="pdp-badges" aria-label="Safe for">
+                {safeFlags.map((flag) => (
+                  <li key={flag.key}>✓ {flag.label}</li>
+                ))}
+              </ul>
+            )}
+
             {/* STOCK */}
             <div className="stock-status">
               {product.stock > 0 ? (
@@ -266,6 +290,31 @@ export default async function ProductPage({ params }: PageProps) {
                 stock: product.stock,
               }}
             />
+
+            {/* DELIVERY & RETURNS */}
+            <div className="pdp-delivery">
+              {product.stock > 0 && (
+                <p>
+                  <strong>
+                    Estimated delivery: {formatDeliveryDate(eta.earliest)} – {formatDeliveryDate(eta.latest)}
+                  </strong>
+                  <span>
+                    {freeDelivery
+                      ? "Free delivery on this item"
+                      : `Free delivery on orders of ₹${delivery.freeDeliveryThreshold.toLocaleString("en-IN")}+, otherwise ₹${delivery.deliveryFee.toLocaleString("en-IN")}`}
+                  </span>
+                </p>
+              )}
+              <p>
+                <strong>{product.returnable ? `${POLICY.returnDays}-day returns` : "Not returnable"}</strong>
+                <span>
+                  {product.returnable
+                    ? `Unused items in original packaging can be returned within ${POLICY.returnDays} days of delivery.`
+                    : "This item can't be returned for a change of mind. Damage in transit is still covered."}{" "}
+                  <Link href="/return-refund-policy">Policy</Link>
+                </span>
+              </p>
+            </div>
 
             {/* WHY BUY */}
             <ul className="product-assurances">
@@ -306,19 +355,70 @@ export default async function ProductPage({ params }: PageProps) {
               <p className="product-description">{product.description}</p>
             )}
 
-            {/* SPECIFICATIONS */}
-            {specifications && (
-              <div className="specifications">
-                <h2>Product Information</h2>
-
-                {specifications.map(([label, value]) => (
-                  <div className="spec-row" key={label}>
-                    <span>{label}</span>
-                    <strong>{value}</strong>
+            {/* DETAILS: only what has been filled in for this product */}
+            <div className="pdp-sections">
+              {(details.build.length > 0 || details.other.length > 0) && (
+                <details open>
+                  <summary>Product details</summary>
+                  <div className="specifications">
+                    {[...details.build, ...details.other].map((row) => (
+                      <div className="spec-row" key={row.label}>
+                        <span>{row.label}</span>
+                        <strong>{row.value}</strong>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                </details>
+              )}
+
+              {details.included && (
+                <details>
+                  <summary>What&apos;s included</summary>
+                  <p className="pdp-text">{details.included}</p>
+                </details>
+              )}
+
+              {(details.safety.length > 0 || details.care) && (
+                <details>
+                  <summary>Care &amp; safety</summary>
+                  {details.safety.length > 0 && (
+                    <div className="specifications">
+                      {details.safety.map((flag) => (
+                        <div className="spec-row" key={flag.key}>
+                          <span>{flag.label}</span>
+                          <strong>{flag.value ? "Yes" : "No"}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {details.care && <p className="pdp-text">{details.care}</p>}
+                </details>
+              )}
+
+              <details>
+                <summary>Delivery &amp; returns</summary>
+                <ul className="pdp-text">
+                  <li>
+                    Packed and dispatched within {processingDays} {processingDays === 1 ? "day" : "days"}, then usually{" "}
+                    {POLICY.deliveryDays} with the courier.
+                  </li>
+                  <li>
+                    Free delivery on orders of ₹{delivery.freeDeliveryThreshold.toLocaleString("en-IN")} or more; ₹
+                    {delivery.deliveryFee.toLocaleString("en-IN")} below that.
+                  </li>
+                  <li>
+                    {product.returnable
+                      ? `Returnable within ${POLICY.returnDays} days of delivery if unused and in its original packaging.`
+                      : "Not returnable for a change of mind."}{" "}
+                    Anything damaged in transit is replaced free if reported within {POLICY.damageReportHours} hours.
+                  </li>
+                </ul>
+                <p className="pdp-text">
+                  <Link href="/shipping-policy">Shipping policy</Link> ·{" "}
+                  <Link href="/return-refund-policy">Return &amp; refund policy</Link>
+                </p>
+              </details>
+            </div>
 
             {/* WHATSAPP (shown once a number is set in lib/business.ts) */}
             {whatsappHref && (
@@ -335,47 +435,60 @@ export default async function ProductPage({ params }: PageProps) {
         <div className="product-container">
           <div className="reviews-head">
             <p className="section-label">CUSTOMER REVIEWS</p>
-            <h2>
-              {rating !== null ? (
-                <>
-                  <span className="reviews-stars" aria-hidden="true">
-                    {"★".repeat(Math.round(rating))}
-                    <span className="off">{"★".repeat(5 - Math.round(rating))}</span>
-                  </span>{" "}
-                  {rating.toFixed(1)} out of 5
-                </>
-              ) : (
-                "No reviews yet"
+            <div className="reviews-summary">
+              <div>
+                <h2>
+                  {rating !== null ? (
+                    <>
+                      <span className="reviews-score">{rating.toFixed(1)}</span>
+                      <span className="reviews-stars" aria-label={`${rating.toFixed(1)} out of 5 stars`}>
+                        {"★".repeat(Math.round(rating))}
+                        <span className="off">{"★".repeat(5 - Math.round(rating))}</span>
+                      </span>
+                    </>
+                  ) : (
+                    "No reviews yet"
+                  )}
+                </h2>
+                <p className="reviews-sub">
+                  {product.reviewCount > 0
+                    ? `Based on ${product.reviewCount} ${product.reviewCount === 1 ? "review" : "reviews"}${
+                        verifiedCount > 0 ? ` · ${verifiedCount} from verified buyers` : ""
+                      }`
+                    : "Bought this piece? Be the first to share how it looks on your table."}
+                </p>
+              </div>
+
+              {product.reviewCount > 0 && (
+                <ul className="rating-bars" aria-label="Rating breakdown">
+                  {ratingCounts.map(({ star, count }) => (
+                    <li key={star}>
+                      <span>{star} ★</span>
+                      <span className="rating-bar">
+                        <span style={{ width: `${(count / product.reviewCount) * 100}%` }} />
+                      </span>
+                      <span>{count}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </h2>
-            <p className="reviews-sub">
-              {product.reviewCount > 0
-                ? `Based on ${product.reviewCount} ${product.reviewCount === 1 ? "review" : "reviews"}${
-                    verifiedCount > 0 ? ` · ${verifiedCount} from verified buyers` : ""
-                  }`
-                : "Be the first to review this product."}
-            </p>
+            </div>
           </div>
 
           <div className="reviews-layout">
-            <ul className="reviews-list">
-              {reviews.map((review) => (
-                <li key={review.id}>
-                  <div className="review-meta">
-                    <span className="reviews-stars small" aria-label={`${review.rating} out of 5 stars`}>
-                      {"★".repeat(review.rating)}
-                      <span className="off">{"★".repeat(5 - review.rating)}</span>
-                    </span>
-                    {review.isVerifiedPurchase && <span className="verified-badge">Verified buyer</span>}
-                  </div>
-                  {review.title && <h3>{review.title}</h3>}
-                  {review.comment && <p>{review.comment}</p>}
-                  <small>
-                    {reviewerDisplayName(review.customer.name)} &middot; {formatOrderDate(review.createdAt)}
-                  </small>
-                </li>
-              ))}
-            </ul>
+            <ReviewList
+              reviews={reviews.map((review) => ({
+                id: review.id,
+                rating: review.rating,
+                title: review.title,
+                comment: review.comment,
+                verified: review.isVerifiedPurchase,
+                author: reviewerDisplayName(review.customer.name),
+                date: formatOrderDate(review.createdAt),
+                createdAt: review.createdAt.toISOString(),
+                photos: review.photos.map((photo) => reviewPhotoUrl(photo.id)),
+              }))}
+            />
 
             <div className="reviews-aside">
               <ReviewComposer slug={product.slug} />
@@ -404,7 +517,7 @@ export default async function ProductPage({ params }: PageProps) {
                 price: Number(related.price),
                 mrp: related.mrp ? Number(related.mrp) : null,
                 stock: related.stock,
-                rating: null,
+                rating: related.rating ? Number(related.rating) : null,
                 category: { name: product.category.name },
                 image: related.images[0]?.url ?? "/placeholder-product.svg",
               }))}

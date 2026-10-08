@@ -24,6 +24,12 @@ const imageUrl = z
     "Image URLs must start with https:// or / (a file in /public)."
   );
 
+/** "" → not specified (null), "yes" / "no" → true / false. */
+const yesNo = z
+  .enum(["", "yes", "no"], { message: "Choose Yes, No or Not specified." })
+  .optional()
+  .transform((value) => (value === "yes" ? true : value === "no" ? false : null));
+
 const productSchema = z
   .object({
     name: z.string().trim().min(2, "Name is required.").max(120),
@@ -52,6 +58,18 @@ const productSchema = z
       ),
     description: optionalText(5000),
     specifications: z.string().max(5000),
+    dimensions: optionalText(120),
+    weight: optionalText(120),
+    material: optionalText(120),
+    capacity: optionalText(120),
+    colour: optionalText(120),
+    finish: optionalText(120),
+    whatsIncluded: optionalText(1000),
+    careInstructions: optionalText(1000),
+    foodSafe: yesNo,
+    microwaveSafe: yesNo,
+    dishwasherSafe: yesNo,
+    returnable: checkbox,
     images: z.string().max(10000),
     isActive: checkbox,
     isFeatured: checkbox,
@@ -130,6 +148,18 @@ export async function saveProduct(
     stock: data.stock,
     description: data.description,
     specifications: specs.rows.length > 0 ? specs.rows : undefined,
+    dimensions: data.dimensions,
+    weight: data.weight,
+    material: data.material,
+    capacity: data.capacity,
+    colour: data.colour,
+    finish: data.finish,
+    whatsIncluded: data.whatsIncluded,
+    careInstructions: data.careInstructions,
+    foodSafe: data.foodSafe,
+    microwaveSafe: data.microwaveSafe,
+    dishwasherSafe: data.dishwasherSafe,
+    returnable: data.returnable,
     isActive: data.isActive,
     isFeatured: data.isFeatured,
   };

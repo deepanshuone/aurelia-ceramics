@@ -32,3 +32,9 @@ export const getDeliveryRules = unstable_cache(readDeliveryRules, ["delivery-rul
   revalidate: 600,
   tags: [STORE_SETTINGS_TAG],
 });
+
+/** The store processing time for display (product page delivery estimate). Cached like getDeliveryRules. */
+export const getDisplayProcessingDays = unstable_cache(getStoreProcessingDays, ["processing-days"], {
+  revalidate: 600,
+  tags: [STORE_SETTINGS_TAG],
+});

@@ -38,9 +38,14 @@ export function whatsappLink(message: string) {
 // Commercial terms the policy pages describe. Delivery charges are set in
 // Admin → Settings (lib/store-settings.ts); the online-payment window is PAYMENT_WINDOW_MINUTES in
 // lib/payments.ts. The rest are operational promises — adjust to what you can meet.
+// Courier transit time after dispatch, in business days (Sundays excluded).
+// The product page's delivery estimate uses these with the processing time.
+const TRANSIT_DAYS = { min: 3, max: 8 } as const;
+
 export const POLICY = {
   dispatchDays: "1–3 business days",
-  deliveryDays: "3–8 business days",
+  deliveryDays: `${TRANSIT_DAYS.min}–${TRANSIT_DAYS.max} business days`,
+  transitDays: TRANSIT_DAYS,
   damageReportHours: 48,
   returnDays: 7,
   refundDays: "5–7 business days",

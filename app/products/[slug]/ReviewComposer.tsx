@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import ReviewForm from "./ReviewForm";
+import ReviewForm, { type ExistingReview } from "./ReviewForm";
 
 type Eligibility = {
   loggedIn: boolean;
   canReview: boolean;
   verified?: boolean;
-  existing: { rating: number; title: string; comment: string } | null;
+  existing: ExistingReview | null;
 };
 
 /**

@@ -67,6 +67,22 @@ model Product {
   code           String           @unique
   description    String?
   specifications Json?
+  // Product-page details; each is optional and only shown when filled in.
+  // Free text so admins can write "26 cm × 9 cm" or "450 g" as they like.
+  dimensions       String?
+  weight           String?
+  material         String?
+  capacity         String?
+  colour           String?
+  finish           String?
+  whatsIncluded    String?
+  careInstructions String?
+  // Null means "not specified" (nothing is shown).
+  foodSafe         Boolean?
+  microwaveSafe    Boolean?
+  dishwasherSafe   Boolean?
+  // False for items that can't be returned for a change of mind (damage is still covered).
+  returnable       Boolean          @default(true)
   categoryId     String
   category       Category         @relation(fields: [categoryId], references: [id])
   price          Decimal          @db.Decimal(10, 2)
@@ -316,11 +332,27 @@ model Review {
   title              String?
   comment            String?
   isVerifiedPurchase Boolean  @default(false)
+  photos             ReviewPhoto[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   @@unique([productId, customerId])
   @@index([productId])
+}
+
+// Photos customers attach to their reviews. Stored in the database (resized in
+// the browser first, so each is a few hundred KB) and served by
+// /api/reviews/photos/[id].
+model ReviewPhoto {
+  id        String   @id @default(cuid())
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  mimeType  String
+  data      Bytes
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([reviewId])
 }
 
 model Wishlist {

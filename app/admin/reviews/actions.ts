@@ -22,3 +22,20 @@ export async function deleteReview(reviewId: string): Promise<ActionState> {
   revalidatePath(`/products/${review.product.slug}`);
   return { success: "Review deleted." };
 }
+
+/** Removes one customer photo from a review (the review itself stays). */
+export async function deleteReviewPhoto(photoId: string): Promise<ActionState> {
+  await requirePermission("reviews", "edit");
+
+  const photo = await prisma.reviewPhoto.findUnique({
+    where: { id: photoId },
+    select: { review: { select: { product: { select: { slug: true } } } } },
+  });
+  if (!photo) return { error: "Photo not found." };
+
+  await prisma.reviewPhoto.delete({ where: { id: photoId } });
+
+  revalidatePath("/admin/reviews");
+  revalidatePath(`/products/${photo.review.product.slug}`);
+  return { success: "Photo removed." };
+}

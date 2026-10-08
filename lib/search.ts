@@ -481,30 +481,42 @@ const loadEntries = unstable_cache(
         rating: true,
         createdAt: true,
         specifications: true,
+        colour: true,
+        material: true,
+        finish: true,
         category: { select: { name: true } },
         images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
       },
     });
-    return rows.map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      code: row.code,
-      category: row.category.name,
-      description: (row.description ?? "").slice(0, 500),
-      price: Number(row.price),
-      mrp: row.mrp ? Number(row.mrp) : null,
-      stock: row.stock,
-      isFeatured: row.isFeatured,
-      reviewCount: row.reviewCount,
-      rating: row.rating ? Number(row.rating) : null,
-      createdAt: row.createdAt.getTime(),
-      image: row.images[0]?.url ?? "/placeholder-product.svg",
-      colours: productColours(row.name, row.specifications),
-      material: productMaterial(row.specifications),
-    }));
+    return rows.map((row) => {
+      // The product's own Colour / Material / Finish fields come before its spec lines.
+      const fields = [
+        ["Colour", row.colour],
+        ["Material", row.material],
+        ["Finish", row.finish],
+      ].filter((pair): pair is [string, string] => Boolean(pair[1]?.trim()));
+      const specs = [...fields, ...(Array.isArray(row.specifications) ? row.specifications : [])];
+      return {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        code: row.code,
+        category: row.category.name,
+        description: (row.description ?? "").slice(0, 500),
+        price: Number(row.price),
+        mrp: row.mrp ? Number(row.mrp) : null,
+        stock: row.stock,
+        isFeatured: row.isFeatured,
+        reviewCount: row.reviewCount,
+        rating: row.rating ? Number(row.rating) : null,
+        createdAt: row.createdAt.getTime(),
+        image: row.images[0]?.url ?? "/placeholder-product.svg",
+        colours: productColours(row.name, specs),
+        material: productMaterial(specs),
+      };
+    });
   },
-  ["search-entries-v2"],
+  ["search-entries-v3"],
   { revalidate: 300, tags: ["products"] }
 );
 

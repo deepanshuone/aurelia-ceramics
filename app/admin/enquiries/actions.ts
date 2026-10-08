@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { type ActionState, firstIssue, optionalText, requireEditor } from "../../../lib/admin";
+import { type ActionState, firstIssue, optionalText, requirePermission } from "../../../lib/admin";
 import { prisma } from "../../../lib/prisma";
 
 const updateSchema = z.object({
@@ -15,7 +15,7 @@ export async function updateEnquiry(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("enquiries", "edit");
 
   const parsed = updateSchema.safeParse({
     status: formData.get("status"),
@@ -31,7 +31,7 @@ export async function updateEnquiry(
 }
 
 export async function deleteEnquiry(enquiryId: string): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("enquiries", "edit");
   await prisma.enquiry.deleteMany({ where: { id: enquiryId } });
   revalidatePath("/admin");
   revalidatePath("/admin/enquiries");

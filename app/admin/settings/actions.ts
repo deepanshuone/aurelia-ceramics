@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
-import { type ActionState, firstIssue, requireAdmin } from "../../../lib/admin";
+import { type ActionState, firstIssue, requirePermission } from "../../../lib/admin";
 import { MAX_PROCESSING_DAYS } from "../../../lib/processing";
 import { prisma } from "../../../lib/prisma";
 import { STORE_SETTINGS_TAG } from "../../../lib/store-settings";
@@ -28,7 +28,7 @@ const settingsSchema = z.object({
 });
 
 export async function saveSettings(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  await requirePermission("settings", "edit");
 
   const parsed = settingsSchema.safeParse({
     processingDays: formData.get("processingDays"),

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ROLE_LABELS, requireStaff } from "../../lib/admin";
-import AdminNav from "../../components/admin/AdminNav";
+import { AREAS, AREA_INFO } from "../../lib/permissions";
+import AdminNav, { type AdminLink, AdminShell } from "../../components/admin/AdminNav";
 import "./admin.css";
 
 export const metadata: Metadata = {
@@ -11,28 +12,36 @@ export const metadata: Metadata = {
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireStaff();
 
-  return (
-    // Viewers see every page, but forms are shown read-only (the server
-    // actions reject them regardless).
-    <div className={`admin-shell${admin.role === "VIEWER" ? " admin-readonly" : ""}`}>
-      <aside className="admin-sidebar">
-        <p className="admin-sidebar-title">AURELIA ADMIN</p>
-        <AdminNav isAdmin={admin.role === "ADMIN"} />
-        <p className="admin-sidebar-user">
-          Signed in as
-          <br />
-          <strong>{admin.name}</strong>
-          <br />
-          {ROLE_LABELS[admin.role]}
-        </p>
-      </aside>
+  // Areas the admin turned off for this role are hidden; view-only ones are
+  // shown read-only (pages and actions check the same permissions).
+  const links: AdminLink[] = [
+    { href: "/admin", label: "Dashboard", readOnly: false },
+    ...AREAS.flatMap((area) => {
+      const { path, label } = AREA_INFO[area];
+      const level = admin.access[area];
+      return path && level !== "none" ? [{ href: path, label, readOnly: level === "view" }] : [];
+    }),
+    ...(admin.role === "ADMIN" ? [{ href: "/admin/team", label: "Team & Access", readOnly: false }] : []),
+  ];
 
-      <div className="admin-main">
-        {admin.role === "VIEWER" && (
-          <p className="admin-panel admin-readonly-note">View-only access: you can look around, but not change anything.</p>
-        )}
-        {children}
-      </div>
-    </div>
+  return (
+    <AdminShell
+      links={links}
+      sidebar={
+        <>
+          <p className="admin-sidebar-title">AURELIA ADMIN</p>
+          <AdminNav links={links} />
+          <p className="admin-sidebar-user">
+            Signed in as
+            <br />
+            <strong>{admin.name}</strong>
+            <br />
+            {ROLE_LABELS[admin.role]}
+          </p>
+        </>
+      }
+    >
+      {children}
+    </AdminShell>
   );
 }

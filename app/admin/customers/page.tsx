@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PAGE_SIZE, ROLE_LABELS, STAFF_ROLES, isStaffRole, parsePage, requireStaff } from "../../../lib/admin";
+import { PAGE_SIZE, ROLE_LABELS, STAFF_ROLES, isStaffRole, parsePage, requirePermission } from "../../../lib/admin";
 import type { Prisma } from "../../../lib/generated/prisma/client";
 import { formatOrderDate, formatRupees } from "../../../lib/order-display";
 import { prisma } from "../../../lib/prisma";
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Customers" };
 type Search = { q?: string; role?: string; page?: string };
 
 export default async function AdminCustomersPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireStaff();
+  await requirePermission("customers", "view");
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
 

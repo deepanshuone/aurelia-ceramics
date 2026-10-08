@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
-import { type ActionState, firstIssue, optionalText, requireAdmin, requireEditor } from "../../../lib/admin";
+import { type ActionState, firstIssue, optionalText, requirePermission } from "../../../lib/admin";
 import { CANCELLABLE_STATUSES as CANCELLABLE, NEXT_STATUSES } from "../../../lib/order-display";
 import { releaseOrderInventory } from "../../../lib/order-inventory";
 import { MAX_PROCESSING_DAYS } from "../../../lib/processing";
@@ -41,7 +41,7 @@ export async function updateOrderStatus(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("orders", "edit");
 
   const parsed = statusSchema.safeParse({ status: formData.get("status") });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
@@ -94,7 +94,7 @@ export async function updateProcessingDays(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("orders", "edit");
 
   const parsed = processingSchema.safeParse({ processingDays: formData.get("processingDays") ?? "" });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
@@ -127,7 +127,7 @@ export async function updateTracking(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("orders", "edit");
 
   const parsed = trackingSchema.safeParse({
     trackingCarrier: formData.get("trackingCarrier") ?? "",
@@ -165,7 +165,7 @@ export async function cancelOrder(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("orders", "edit");
 
   const parsed = cancelSchema.safeParse({ reason: formData.get("reason") ?? "" });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
@@ -210,8 +210,9 @@ export async function refundOrder(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  // Refunds move money, so they are for full admins only.
-  await requireAdmin();
+  // Refunds also need edit access to orders (the refund form is on the order page).
+  const staff = await requirePermission("refunds", "edit");
+  if (staff.access.orders !== "edit") return { error: "You need edit access to orders to refund them." };
 
   const parsed = refundSchema.safeParse({
     amount: formData.get("amount"),

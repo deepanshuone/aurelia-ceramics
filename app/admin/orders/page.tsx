@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PAGE_SIZE, parsePage, requireStaff } from "../../../lib/admin";
+import { PAGE_SIZE, parsePage, requirePermission } from "../../../lib/admin";
 import type { Prisma } from "../../../lib/generated/prisma/client";
 import { OrderStatus, PaymentStatus } from "../../../lib/generated/prisma/enums";
 import {
@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Orders" };
 type Search = { q?: string; status?: string; payment?: string; page?: string };
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireStaff();
+  await requirePermission("orders", "view");
   const params = await searchParams;
 
   const q = params.q?.trim() ?? "";

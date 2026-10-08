@@ -11,7 +11,7 @@ import {
   money,
   optionalMoney,
   optionalText,
-  requireEditor,
+  requirePermission,
 } from "../../../lib/admin";
 import { prisma } from "../../../lib/prisma";
 
@@ -71,7 +71,7 @@ export async function saveCoupon(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("coupons", "edit");
 
   const parsed = couponSchema.safeParse({
     code: formData.get("code") ?? "",
@@ -106,7 +106,7 @@ export async function saveCoupon(
 }
 
 export async function deleteCoupon(couponId: string): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("coupons", "edit");
 
   const used = await prisma.order.count({ where: { couponId } });
   if (used > 0) {

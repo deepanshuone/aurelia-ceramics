@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { requireAdmin } from "../../../lib/admin";
+import { requirePermission } from "../../../lib/admin";
 import { getStoreProcessingDays, readDeliveryRules } from "../../../lib/store-settings";
 import SettingsForm from "./SettingsForm";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function AdminSettingsPage() {
-  await requireAdmin();
+  await requirePermission("settings", "view");
   const [processingDays, delivery] = await Promise.all([getStoreProcessingDays(), readDeliveryRules()]);
 
   return (

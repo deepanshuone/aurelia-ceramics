@@ -9,7 +9,7 @@ import {
   firstIssue,
   isUniqueViolation,
   optionalText,
-  requireEditor,
+  requirePermission,
   slugify,
 } from "../../../lib/admin";
 import { prisma } from "../../../lib/prisma";
@@ -39,7 +39,7 @@ export async function saveCategory(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("categories", "edit");
 
   const parsed = categorySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstIssue(parsed.error) };
@@ -66,7 +66,7 @@ export async function saveCategory(
 }
 
 export async function deleteCategory(categoryId: string): Promise<ActionState> {
-  await requireEditor();
+  await requirePermission("categories", "edit");
 
   const count = await prisma.product.count({ where: { categoryId } });
   if (count > 0) {

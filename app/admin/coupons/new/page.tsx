@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireStaff } from "../../../../lib/admin";
+import { requirePermission } from "../../../../lib/admin";
 import CouponForm from "../CouponForm";
 
 export const metadata: Metadata = { title: "New coupon" };
 
 export default async function NewCouponPage() {
-  await requireStaff();
+  await requirePermission("coupons", "edit");
 
   return (
     <>

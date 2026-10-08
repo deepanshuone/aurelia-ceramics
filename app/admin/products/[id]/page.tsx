@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireStaff } from "../../../../lib/admin";
+import { requirePermission } from "../../../../lib/admin";
 import { prisma } from "../../../../lib/prisma";
 import ProductForm from "../ProductForm";
 
@@ -14,7 +14,7 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ created?: string }>;
 }) {
-  await requireStaff();
+  await requirePermission("products", "view");
   const { id } = await params;
   const { created } = await searchParams;
 

@@ -365,5 +365,8 @@ model StoreSetting {
   // Delivery pricing in whole rupees: orders below the threshold pay the fee.
   freeDeliveryThreshold Int      @default(999)
   deliveryFee           Int      @default(99)
+  // What Editors and Viewers may see or change, per admin area (lib/permissions.ts).
+  // Null means the built-in defaults.
+  rolePermissions       Json?
   updatedAt             DateTime @updatedAt
 }

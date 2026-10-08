@@ -4,31 +4,10 @@ import { ROLE_LABELS, STAFF_ROLES, isOwnerEmail, requireAdmin } from "../../../l
 import { formatOrderDate } from "../../../lib/order-display";
 import { ownerEmails } from "../../../lib/owner";
 import { prisma } from "../../../lib/prisma";
-import { GrantAccessForm, MemberAccessForm } from "./TeamForms";
+import { AREAS, AREA_INFO, getRolePermissions } from "../../../lib/permissions";
+import { GrantAccessForm, MemberAccessForm, PermissionsForm } from "./TeamForms";
 
 export const metadata: Metadata = { title: "Team & Access" };
-
-// What each access level can do. Keep in sync with requireStaff /
-// requireEditor / requireAdmin in lib/admin.ts.
-const PERMISSIONS: { area: string; admin: string; editor: string; viewer: string }[] = [
-  { area: "Dashboard & reports", admin: "full", editor: "view", viewer: "view" },
-  { area: "Products: add, edit price, stock, name, delete", admin: "full", editor: "full", viewer: "view" },
-  { area: "Categories", admin: "full", editor: "full", viewer: "view" },
-  { area: "Orders: status, tracking, cancel, processing days", admin: "full", editor: "full", viewer: "view" },
-  { area: "Refunds", admin: "full", editor: "none", viewer: "none" },
-  { area: "Coupons", admin: "full", editor: "full", viewer: "view" },
-  { area: "Reviews & enquiries", admin: "full", editor: "full", viewer: "view" },
-  { area: "Customers: view details", admin: "full", editor: "view", viewer: "view" },
-  { area: "Block customers", admin: "full", editor: "none", viewer: "none" },
-  { area: "Store settings", admin: "full", editor: "none", viewer: "none" },
-  { area: "Team & Access: give or remove access", admin: "full", editor: "none", viewer: "none" },
-];
-
-const CELL: Record<string, { label: string; className: string }> = {
-  full: { label: "Can edit", className: "perm full" },
-  view: { label: "View only", className: "perm view" },
-  none: { label: "No access", className: "perm none" },
-};
 
 export default async function TeamPage() {
   const me = await requireAdmin();
@@ -67,6 +46,10 @@ export default async function TeamPage() {
 
       <section className="admin-panel">
         <h2>People with access</h2>
+        <p className="admin-hint team-hint">
+          To change someone&apos;s level, pick a new one and press Update. To take admin access away, choose
+          &quot;Customer&quot; or press Remove access: they go back to being a normal customer.
+        </p>
         {members.length === 0 ? (
           <p className="admin-empty">Nobody has admin access yet.</p>
         ) : (
@@ -115,30 +98,14 @@ export default async function TeamPage() {
 
       <section className="admin-panel">
         <h2>What each level can do</h2>
-        <div className="admin-table-wrap">
-          <table className="admin-table perm-table">
-            <thead>
-              <tr>
-                <th>Area</th>
-                <th>Admin</th>
-                <th>Editor</th>
-                <th>Viewer</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PERMISSIONS.map((row) => (
-                <tr key={row.area}>
-                  <td>{row.area}</td>
-                  {[row.admin, row.editor, row.viewer].map((level, i) => (
-                    <td key={i}>
-                      <span className={CELL[level].className}>{CELL[level].label}</span>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <p className="admin-hint team-hint">
+          Choose what Editors and Viewers can see or change. Admins always have full access, and only admins can
+          open Team &amp; Access, so nobody can give themselves more access.
+        </p>
+        <PermissionsForm
+          areas={AREAS.map((area) => ({ area, label: AREA_INFO[area].label, detail: AREA_INFO[area].detail }))}
+          permissions={await getRolePermissions()}
+        />
         <p className="admin-hint team-hint">Customers have no admin panel access; they only shop and see their own orders.</p>
       </section>
     </>

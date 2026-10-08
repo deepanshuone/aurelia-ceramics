@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PAGE_SIZE, parsePage, requireStaff } from "../../../lib/admin";
+import { PAGE_SIZE, parsePage, requirePermission } from "../../../lib/admin";
 import { formatOrderDate } from "../../../lib/order-display";
 import { prisma } from "../../../lib/prisma";
 import Pagination from "../../../components/admin/Pagination";
@@ -9,7 +9,7 @@ import DeleteReviewButton from "./DeleteReviewButton";
 export const metadata: Metadata = { title: "Reviews" };
 
 export default async function AdminReviewsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  await requireStaff();
+  await requirePermission("reviews", "view");
   const params = await searchParams;
 
   const total = await prisma.review.count();

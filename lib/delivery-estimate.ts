@@ -1,42 +1,43 @@
 import { POLICY } from "./business";
 
-// Expected delivery dates: the order's processing time (calendar days, see
-// lib/processing.ts) and then courier transit (POLICY.transitDays, business
-// days with Sundays skipped). Dates are India calendar dates.
-
 const DAY_MS = 24 * 60 * 60 * 1000;
-const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+const TIME_ZONE = "Asia/Kolkata";
 
-/** The India calendar date of `instant`, as midnight UTC (read it with UTC getters). */
-function istDate(instant: Date) {
-  const shifted = new Date(instant.getTime() + IST_OFFSET_MS);
-  return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()));
-}
-
-function addBusinessDays(date: Date, days: number) {
-  let result = date;
-  let added = 0;
-  while (added < days) {
-    result = new Date(result.getTime() + DAY_MS);
-    if (result.getUTCDay() !== 0) added++;
+/** Adds business days (Mon–Sat; couriers don't deliver on Sundays). */
+function addBusinessDays(start: Date, days: number) {
+  const date = new Date(start);
+  let left = days;
+  while (left > 0) {
+    date.setTime(date.getTime() + DAY_MS);
+    const weekday = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, weekday: "short" }).format(date);
+    if (weekday !== "Sun") left -= 1;
   }
-  return result;
+  return date;
 }
 
-export type DeliveryEstimate = { earliest: Date; latest: Date };
-
-/** Delivery window for an order confirmed at `confirmedAt` (now, for one not placed yet). */
-export function estimateDelivery(processingDays: number, confirmedAt = new Date()): DeliveryEstimate {
-  const readyBy = new Date(istDate(confirmedAt).getTime() + Math.max(0, processingDays) * DAY_MS);
+/**
+ * When an order placed now should arrive: the store's processing time
+ * (calendar days, as in lib/processing.ts) plus courier transit time.
+ */
+export function estimateDelivery(processingDays: number, now = new Date()) {
+  const dispatchBy = new Date(now.getTime() + processingDays * DAY_MS);
   return {
-    earliest: addBusinessDays(readyBy, POLICY.transitDays.min),
-    latest: addBusinessDays(readyBy, POLICY.transitDays.max),
+    earliest: addBusinessDays(dispatchBy, POLICY.transitDays.min),
+    latest: addBusinessDays(dispatchBy, POLICY.transitDays.max),
   };
 }
 
-/** e.g. "Tue, 14 Oct – Sat, 18 Oct". */
-export function formatDeliveryEstimate({ earliest, latest }: DeliveryEstimate) {
-  const format = (date: Date) =>
-    date.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-  return `${format(earliest)} – ${format(latest)}`;
+/** "Mon, 13 Oct" in Indian time. */
+export function formatDeliveryDate(date: Date) {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: TIME_ZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(date);
+}
+
+/** e.g. "Tue, 14 Oct – Sat, 18 Oct", for checkout and order pages. */
+export function formatDeliveryEstimate({ earliest, latest }: { earliest: Date; latest: Date }) {
+  return `${formatDeliveryDate(earliest)} – ${formatDeliveryDate(latest)}`;
 }

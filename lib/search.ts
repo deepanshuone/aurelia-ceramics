@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "./prisma";
+import { productColours, productMaterial } from "./product-facets";
 
 // Product search: tolerant of typos, plurals, word order, product codes,
 // synonyms (cup/mug/pyala, katori/bowl…), Hindi-script words and simple price
@@ -21,6 +22,9 @@ export type SearchEntry = {
   rating: number | null;
   createdAt: number;
   image: string;
+  /** Read from the specifications and name (lib/product-facets.ts); may be empty. */
+  colours: string[];
+  material: string | null;
 };
 
 export type SearchFilters = {
@@ -28,6 +32,10 @@ export type SearchFilters = {
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
+  colour?: string;
+  material?: string;
+  /** Average review rating at least this (products without reviews never pass). */
+  minRating?: number;
 };
 
 export type SearchResult = {
@@ -319,6 +327,9 @@ export function searchIndex(index: SearchIndex, rawQuery: string, filters: Searc
     const max = Math.min(filters.maxPrice ?? Infinity, priceHint?.max ?? Infinity);
     if (e.price < min || e.price > max) return false;
     if (filters.inStock && e.stock <= 0) return false;
+    if (filters.colour && !e.colours.includes(filters.colour)) return false;
+    if (filters.material && e.material !== filters.material) return false;
+    if (filters.minRating && (e.reviewCount === 0 || (e.rating ?? 0) < filters.minRating)) return false;
     return true;
   };
 
@@ -398,6 +409,58 @@ export function searchIndex(index: SearchIndex, rawQuery: string, filters: Searc
   return finish(scored, partial, corrected);
 }
 
+// ---------------------------------------------------------------- categories
+
+export type CategorySuggestion = {
+  name: string;
+  count: number;
+  /** Every word of the query described the category ("mugs"), not just part of it ("blue mugs"). */
+  whole: boolean;
+};
+
+/**
+ * Categories a query points at: "mug" → Cups & Mugs, "plate" → Plates and
+ * Decorative Plates, "dinner" → Dinner Sets, "chai" → Tea Sets & Teapots.
+ * Partly typed words count too ("pla" → Plates, Planters & Pots).
+ */
+export function suggestCategories(index: SearchIndex, rawQuery: string, limit = 3): CategorySuggestion[] {
+  const { tokens } = parseQuery(rawQuery);
+  const terms = tokens
+    .filter((t) => !t.optional)
+    .map((t) => {
+      const fixed = correctWord(index, t.text);
+      return fixed ? { text: fixed, alts: [...(synonymsOf.get(fixed) ?? [])] } : t;
+    });
+  if (terms.length === 0) return [];
+
+  const categories = new Map<string, { stems: string[]; count: number }>();
+  for (const p of index.items) {
+    const c = categories.get(p.entry.category);
+    if (c) c.count++;
+    else categories.set(p.entry.category, { stems: p.catStems, count: 1 });
+  }
+
+  const out: (CategorySuggestion & { score: number })[] = [];
+  for (const [name, { stems, count }] of categories) {
+    let score = 0;
+    let matched = 0;
+    for (const w of terms) {
+      let s = 0;
+      if (stems.includes(w.text)) s = 10;
+      else if (w.alts.some((a) => stems.includes(a))) s = 8;
+      else if (w.text.length >= 2 && stems.some((st) => st.length > 2 && st.startsWith(w.text))) s = 6;
+      if (s > 0) matched++;
+      score += s;
+    }
+    if (matched === 0) continue;
+    out.push({ name, count, whole: matched === terms.length, score: score + matched * 5 });
+  }
+  return out
+    .sort((a, b) => b.score - a.score || b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, limit)
+    .map(({ name, count, whole }) => ({ name, count, whole }));
+}
+
 // ---------------------------------------------------------------- data access
 
 const loadEntries = unstable_cache(
@@ -417,28 +480,43 @@ const loadEntries = unstable_cache(
         reviewCount: true,
         rating: true,
         createdAt: true,
+        specifications: true,
+        colour: true,
+        material: true,
+        finish: true,
         category: { select: { name: true } },
         images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
       },
     });
-    return rows.map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      code: row.code,
-      category: row.category.name,
-      description: (row.description ?? "").slice(0, 500),
-      price: Number(row.price),
-      mrp: row.mrp ? Number(row.mrp) : null,
-      stock: row.stock,
-      isFeatured: row.isFeatured,
-      reviewCount: row.reviewCount,
-      rating: row.rating ? Number(row.rating) : null,
-      createdAt: row.createdAt.getTime(),
-      image: row.images[0]?.url ?? "/placeholder-product.svg",
-    }));
+    return rows.map((row) => {
+      // The product's own Colour / Material / Finish fields come before its spec lines.
+      const fields = [
+        ["Colour", row.colour],
+        ["Material", row.material],
+        ["Finish", row.finish],
+      ].filter((pair): pair is [string, string] => Boolean(pair[1]?.trim()));
+      const specs = [...fields, ...(Array.isArray(row.specifications) ? row.specifications : [])];
+      return {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        code: row.code,
+        category: row.category.name,
+        description: (row.description ?? "").slice(0, 500),
+        price: Number(row.price),
+        mrp: row.mrp ? Number(row.mrp) : null,
+        stock: row.stock,
+        isFeatured: row.isFeatured,
+        reviewCount: row.reviewCount,
+        rating: row.rating ? Number(row.rating) : null,
+        createdAt: row.createdAt.getTime(),
+        image: row.images[0]?.url ?? "/placeholder-product.svg",
+        colours: productColours(row.name, specs),
+        material: productMaterial(specs),
+      };
+    });
   },
-  ["search-entries"],
+  ["search-entries-v3"],
   { revalidate: 300, tags: ["products"] }
 );
 
@@ -455,4 +533,8 @@ export async function getSearchIndex(): Promise<SearchIndex> {
 
 export async function searchProducts(query: string, filters: SearchFilters = {}) {
   return searchIndex(await getSearchIndex(), query, filters);
+}
+
+export async function searchCategories(query: string, limit?: number) {
+  return suggestCategories(await getSearchIndex(), query, limit);
 }

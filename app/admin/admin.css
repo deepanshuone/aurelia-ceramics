@@ -827,3 +827,64 @@ a.admin-stat:hover {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* Product form: grouped product-page details */
+.admin-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--border);
+}
+
+.admin-fieldset legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-fieldset .admin-hint {
+  margin: 0;
+}
+
+/* In the column layout, flex-basis would become a fixed height. */
+.admin-fieldset > .admin-field {
+  flex: none;
+}
+
+/* Reviews: customer photo thumbnails */
+.admin-review-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.admin-review-photos form {
+  position: relative;
+}
+
+.admin-review-photos img {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.admin-review-photos button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #9c2626;
+  color: #fff;
+  font-size: 13px;
+  line-height: 22px;
+  cursor: pointer;
+}

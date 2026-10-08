@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import FormMessage from "../../../components/admin/FormMessage";
 import SubmitButton from "../../../components/admin/SubmitButton";
 import { deleteProduct, saveProduct } from "./actions";
+import type { ProductDetailValues } from "./detail-values";
 
 export type ProductFormValues = {
   id: string | null;
@@ -17,11 +18,27 @@ export type ProductFormValues = {
   description: string;
   specifications: string;
   images: string;
+  details: ProductDetailValues;
   isActive: boolean;
   isFeatured: boolean;
   /** How many past order lines include this product (shown as a warning before deleting). */
   orderCount: number;
 };
+
+const TEXT_DETAILS = [
+  { name: "dimensions", label: "Dimensions", placeholder: "27 cm dia × 3 cm" },
+  { name: "weight", label: "Weight", placeholder: "650 g" },
+  { name: "capacity", label: "Capacity", placeholder: "350 ml" },
+  { name: "material", label: "Material", placeholder: "Stoneware" },
+  { name: "colour", label: "Colour", placeholder: "Sage green" },
+  { name: "finish", label: "Finish", placeholder: "Matte glaze" },
+] as const;
+
+const YES_NO_DETAILS = [
+  { name: "foodSafe", label: "Food safe" },
+  { name: "microwaveSafe", label: "Microwave safe" },
+  { name: "dishwasherSafe", label: "Dishwasher safe" },
+] as const;
 
 export default function ProductForm({
   values,
@@ -88,8 +105,64 @@ export default function ProductForm({
           <textarea name="description" rows={4} defaultValue={values.description} maxLength={5000} />
         </label>
 
+        <fieldset className="admin-fieldset">
+          <legend>Product page details</legend>
+          <p className="admin-hint">Fill in what you know. Anything left blank is simply not shown in the store.</p>
+          <div className="admin-field-row">
+            {TEXT_DETAILS.map((field) => (
+              <label className="admin-field" key={field.name}>
+                <span>{field.label}</span>
+                <input
+                  name={field.name}
+                  defaultValue={values.details[field.name]}
+                  maxLength={120}
+                  placeholder={field.placeholder}
+                />
+              </label>
+            ))}
+          </div>
+          <div className="admin-field-row">
+            {YES_NO_DETAILS.map((field) => (
+              <label className="admin-field" key={field.name}>
+                <span>{field.label}</span>
+                <select name={field.name} defaultValue={values.details[field.name]}>
+                  <option value="">Not specified</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </label>
+            ))}
+          </div>
+          <label className="admin-field">
+            <span>What&apos;s included</span>
+            <textarea
+              name="whatsIncluded"
+              rows={2}
+              defaultValue={values.details.whatsIncluded}
+              maxLength={1000}
+              placeholder="2 mugs, 2 saucers, gift box"
+            />
+          </label>
+          <label className="admin-field">
+            <span>Care instructions</span>
+            <textarea
+              name="careInstructions"
+              rows={2}
+              defaultValue={values.details.careInstructions}
+              maxLength={1000}
+              placeholder="Hand wash with a soft sponge. Avoid sudden temperature changes."
+            />
+          </label>
+          <div className="admin-checks">
+            <label>
+              <input type="checkbox" name="returnable" defaultChecked={values.details.returnable} /> Returnable within
+              the return window (untick for items that can&apos;t be returned for a change of mind)
+            </label>
+          </div>
+        </fieldset>
+
         <label className="admin-field">
-          <span>Specifications — one per line, as “Label: Value”</span>
+          <span>Other specifications — one per line, as “Label: Value”</span>
           <textarea
             name="specifications"
             rows={5}
@@ -99,7 +172,7 @@ export default function ProductForm({
         </label>
 
         <label className="admin-field">
-          <span>Image URLs — one per line, first is the main image</span>
+          <span>Image URLs — one per line, first is the main image (4–6 photos from different angles work best)</span>
           <textarea name="images" rows={3} defaultValue={values.images} placeholder="https://… or /images/plate.jpg" />
         </label>
 

@@ -3,8 +3,7 @@ import { unstable_cache } from "next/cache";
 import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
-import { Prisma } from "../../../lib/generated/prisma/client";
-import { searchProducts } from "../../../lib/search";
+import { searchCategories, searchProducts } from "../../../lib/search";
 import ProductCatalogue from "../../../components/ProductCatalogue";
 import ProductFilters from "../../../components/ProductFilters";
 import CataloguePagination from "../../../components/CataloguePagination";
@@ -19,6 +18,9 @@ type SearchParams = {
   minPrice?: string;
   maxPrice?: string;
   inStock?: string;
+  colour?: string;
+  material?: string;
+  rating?: string;
   sort?: string;
   page?: string;
 };
@@ -49,16 +51,8 @@ export async function generateMetadata({
   };
 }
 
-const SORT_OPTIONS: Record<string, Prisma.ProductOrderByWithRelationInput> = {
-  newest: { createdAt: "desc" },
-  "price-asc": { price: "asc" },
-  "price-desc": { price: "desc" },
-  // Best sellers first (how many times a product has been ordered).
-  popularity: { orderItems: { _count: "desc" } },
-  // Only meaningful while searching (the ranking comes from lib/search.ts);
-  // without a search it behaves like "newest".
-  relevance: { createdAt: "desc" },
-};
+// Ways to order the catalogue. "relevance" only exists while searching.
+const SORTS = ["relevance", "popularity", "newest", "price-asc", "price-desc", "rating"] as const;
 
 type CatalogueFilters = {
   search: string;
@@ -66,6 +60,9 @@ type CatalogueFilters = {
   minPrice: string;
   maxPrice: string;
   inStock: boolean;
+  colour: string;
+  material: string;
+  minRating: number;
   sort: string;
   page: number;
 };
@@ -76,51 +73,86 @@ type SearchInfo = {
   priceHint: { min?: number; max?: number } | null;
 };
 
+type FacetOption = { value: string; count: number };
+
+const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : 1);
+
+function countBy(values: string[]): FacetOption[] {
+  const counts = new Map<string, number>();
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+  return [...counts].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+}
+
 /**
- * Search results: ranked by lib/search.ts (typos, plurals, synonyms, codes,
- * price phrases), then filtered, re-sorted if the shopper asked, and paged.
+ * The catalogue, browsing or searching: lib/search.ts ranks and filters the
+ * visible products in memory (typos, synonyms, codes, price phrases, colour,
+ * material, rating), then the list is re-sorted if the shopper asked, and paged.
+ *
+ * Cached per filter combination for 5 minutes (and dropped immediately when an
+ * admin edits products/categories via revalidateTag), so browsing rarely
+ * touches the database, which on Neon's free tier can take seconds to wake up.
  */
-async function searchCatalogue(filters: CatalogueFilters) {
-  const min = filters.minPrice ? Number(filters.minPrice) : NaN;
-  const max = filters.maxPrice ? Number(filters.maxPrice) : NaN;
-  const result = await searchProducts(filters.search, {
-    category: filters.category || undefined,
-    minPrice: Number.isNaN(min) ? undefined : min,
-    maxPrice: Number.isNaN(max) ? undefined : max,
-    inStock: filters.inStock,
-  });
+const getCatalogue = unstable_cache(
+  async (filters: CatalogueFilters) => {
+    const min = filters.minPrice ? Number(filters.minPrice) : NaN;
+    const max = filters.maxPrice ? Number(filters.maxPrice) : NaN;
+    const category = filters.category && filters.category !== "All Products" ? filters.category : undefined;
 
-  let entries = result.entries;
-  if (filters.sort === "price-asc") entries = [...entries].sort((a, b) => a.price - b.price || (a.id < b.id ? -1 : 1));
-  else if (filters.sort === "price-desc") entries = [...entries].sort((a, b) => b.price - a.price || (a.id < b.id ? -1 : 1));
-  else if (filters.sort === "newest") entries = [...entries].sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? -1 : 1));
-  else if (filters.sort === "popularity") {
-    const counts = await prisma.orderItem.groupBy({
-      by: ["productId"],
-      where: { productId: { in: entries.map((entry) => entry.id) } },
-      _count: { _all: true },
-    });
-    const sold = new Map(counts.map((row) => [row.productId, row._count._all]));
-    entries = [...entries].sort((a, b) => (sold.get(b.id) ?? 0) - (sold.get(a.id) ?? 0) || (a.id < b.id ? -1 : 1));
-  }
+    const [result, scope, dbCategories, categoryMatches] = await Promise.all([
+      searchProducts(filters.search, {
+        category,
+        minPrice: Number.isNaN(min) ? undefined : min,
+        maxPrice: Number.isNaN(max) ? undefined : max,
+        inStock: filters.inStock,
+        colour: filters.colour || undefined,
+        material: filters.material || undefined,
+        minRating: filters.minRating || undefined,
+      }),
+      // The same search without the narrower filters: the colour, material and
+      // rating choices are worked out from these, so none of them leads nowhere.
+      searchProducts(filters.search, { category }),
+      prisma.category.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { name: true },
+      }),
+      filters.search ? searchCategories(filters.search) : Promise.resolve([]),
+    ]);
 
-  const totalProducts = entries.length;
-  const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
-  const page = Math.min(Math.max(filters.page, 1), totalPages);
+    let entries = result.entries;
+    if (filters.sort === "price-asc") entries = [...entries].sort((a, b) => a.price - b.price || byId(a, b));
+    else if (filters.sort === "price-desc") entries = [...entries].sort((a, b) => b.price - a.price || byId(a, b));
+    else if (filters.sort === "newest") entries = [...entries].sort((a, b) => b.createdAt - a.createdAt || byId(a, b));
+    else if (filters.sort === "rating") {
+      // Only real reviews count; unreviewed products go last, newest first.
+      const score = (e: (typeof entries)[number]) => (e.reviewCount > 0 ? (e.rating ?? 0) : -1);
+      entries = [...entries].sort(
+        (a, b) => score(b) - score(a) || b.reviewCount - a.reviewCount || b.createdAt - a.createdAt || byId(a, b)
+      );
+    } else if (filters.sort === "popularity") {
+      // Best sellers first (how many times a product has been ordered).
+      const counts = await prisma.orderItem.groupBy({
+        by: ["productId"],
+        where: { productId: { in: entries.map((entry) => entry.id) } },
+        _count: { _all: true },
+      });
+      const sold = new Map(counts.map((row) => [row.productId, row._count._all]));
+      entries = [...entries].sort(
+        (a, b) => (sold.get(b.id) ?? 0) - (sold.get(a.id) ?? 0) || b.reviewCount - a.reviewCount || byId(a, b)
+      );
+    }
 
-  const dbCategories = await prisma.category.findMany({
-    where: { isActive: true },
-    orderBy: { name: "asc" },
-    select: { name: true },
-  });
+    const totalProducts = entries.length;
+    const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
+    const page = Math.min(Math.max(filters.page, 1), totalPages);
 
-  return {
-    totalProducts,
-    totalPages,
-    page,
-    searchInfo: { corrected: result.corrected, partial: result.partial, priceHint: result.priceHint } as SearchInfo | null,
-    categories: dbCategories.map((c) => c.name),
-    products: entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((entry) => ({
+    // Nothing found: a few well-liked products to keep the shopper going.
+    const picks =
+      totalProducts === 0
+        ? (await searchProducts("", { inStock: true })).entries.slice(0, 4)
+        : [];
+
+    const toCard = (entry: (typeof entries)[number]) => ({
       id: entry.id,
       name: entry.name,
       slug: entry.slug,
@@ -131,83 +163,28 @@ async function searchCatalogue(filters: CatalogueFilters) {
       rating: entry.rating,
       category: { name: entry.category },
       image: entry.image,
-    })),
-  };
-}
-
-/**
- * Catalogue query, cached per filter combination for 5 minutes (and dropped
- * immediately when an admin edits products/categories via revalidateTag).
- * Browsing therefore rarely touches the database, which on Neon's free tier
- * can take several seconds to wake up.
- */
-const getCatalogue = unstable_cache(
-  async (filters: CatalogueFilters) => {
-    if (filters.search) return searchCatalogue(filters);
-
-    const where: Prisma.ProductWhereInput = { isActive: true, category: { isActive: true } };
-
-    if (filters.category && filters.category !== "All Products") {
-      // Keep the visibility check: a hidden category stays hidden even by name.
-      where.category = { name: filters.category, isActive: true };
-    }
-
-    const minPrice = filters.minPrice ? Number(filters.minPrice) : NaN;
-    const maxPrice = filters.maxPrice ? Number(filters.maxPrice) : NaN;
-    if (!Number.isNaN(minPrice) || !Number.isNaN(maxPrice)) {
-      where.price = {};
-      if (!Number.isNaN(minPrice)) where.price.gte = minPrice;
-      if (!Number.isNaN(maxPrice)) where.price.lte = maxPrice;
-    }
-
-    if (filters.inStock) {
-      where.stock = { gt: 0 };
-    }
-
-    const totalProducts = await prisma.product.count({ where });
-    const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
-    const page = Math.min(Math.max(filters.page, 1), totalPages);
-
-    const [dbProducts, dbCategories] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        include: {
-          category: true,
-          images: { orderBy: { sortOrder: "asc" }, take: 1 },
-        },
-        // id as a tie-breaker keeps page boundaries stable.
-        orderBy: [SORT_OPTIONS[filters.sort], { id: "asc" }],
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
-      }),
-      prisma.category.findMany({
-        where: { isActive: true },
-        orderBy: { name: "asc" },
-        select: { name: true },
-      }),
-    ]);
+    });
 
     return {
       totalProducts,
       totalPages,
       page,
-      searchInfo: null as SearchInfo | null,
+      searchInfo: filters.search
+        ? ({ corrected: result.corrected, partial: result.partial, priceHint: result.priceHint } as SearchInfo)
+        : null,
       categories: dbCategories.map((c) => c.name),
-      products: dbProducts.map((product) => ({
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        code: product.code,
-        price: Number(product.price),
-        mrp: product.mrp ? Number(product.mrp) : null,
-        stock: product.stock,
-        rating: product.rating ? Number(product.rating) : null,
-        category: { name: product.category.name },
-        image: product.images[0]?.url ?? "/placeholder-product.svg",
-      })),
+      // Categories the search words point at ("mug" → Cups & Mugs), unless already chosen.
+      categoryMatches: categoryMatches.filter((c) => c.name !== category),
+      facets: {
+        colours: countBy(scope.entries.flatMap((e) => e.colours)),
+        materials: countBy(scope.entries.flatMap((e) => (e.material ? [e.material] : []))),
+        rated: scope.entries.some((e) => e.reviewCount > 0),
+      },
+      products: entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(toCard),
+      picks: picks.map(toCard),
     };
   },
-  ["catalogue"],
+  ["catalogue-v2"],
   { revalidate: 300, tags: ["products"] }
 );
 
@@ -223,18 +200,29 @@ export default async function ProductsPage({
   const inStock = params.inStock === "1";
   // Searching ranks by relevance unless the shopper picks another order.
   const defaultSort = search ? "relevance" : "newest";
-  const sort = params.sort && SORT_OPTIONS[params.sort] && (search || params.sort !== "relevance") ? params.sort : defaultSort;
+  const sort =
+    params.sort && (SORTS as readonly string[]).includes(params.sort) && (search || params.sort !== "relevance")
+      ? params.sort
+      : defaultSort;
   const requestedPage = Number.parseInt(params.page ?? "1", 10);
+  const colour = params.colour?.trim().slice(0, 40) ?? "";
+  const material = params.material?.trim().slice(0, 40) ?? "";
+  const ratingParam = Number.parseInt(params.rating ?? "", 10);
+  const minRating = ratingParam >= 1 && ratingParam <= 5 ? ratingParam : 0;
 
-  const { products, categories, totalProducts, totalPages, page, searchInfo } = await getCatalogue({
+  const { products, picks, categories, categoryMatches, facets, totalProducts, totalPages, page, searchInfo } =
+    await getCatalogue({
     search,
     category,
     minPrice: params.minPrice ?? "",
     maxPrice: params.maxPrice ?? "",
     inStock,
+    colour,
+    material,
+    minRating,
     sort,
     page: Number.isFinite(requestedPage) ? requestedPage : 1,
-  });
+    });
 
   return (
     <main className="products-page">
@@ -294,37 +282,65 @@ export default async function ProductsPage({
             </p>
           )}
 
+          {categoryMatches.length > 0 && (
+            <div className="search-category-matches">
+              <span>Shop the category</span>
+              {categoryMatches.map((c) => (
+                <Link
+                  key={c.name}
+                  href={`/products?category=${encodeURIComponent(c.name)}${c.whole ? "" : `&search=${encodeURIComponent(search)}`}`}
+                >
+                  {c.name} <small>{c.count}</small>
+                </Link>
+              ))}
+            </div>
+          )}
+
           <ProductFilters
             categories={categories}
+            facets={facets}
             current={{
               search,
               category,
               minPrice: params.minPrice ?? "",
               maxPrice: params.maxPrice ?? "",
               inStock,
+              colour,
+              material,
+              rating: minRating ? String(minRating) : "",
               sort,
             }}
           />
 
           {products.length === 0 ? (
+            <>
             <div className="catalogue-empty">
               <p>
                 {search
                   ? `No products found for "${search}".`
                   : "No products match these filters."}
               </p>
-              <span>Try a different search term or clear your filters.</span>
-              {search && (
-                <div className="catalogue-empty-links">
-                  <span>Browse by category</span>
-                  {categories.map((name) => (
-                    <Link key={name} href={`/products?category=${encodeURIComponent(name)}`}>
-                      {name}
-                    </Link>
-                  ))}
-                </div>
-              )}
+              <span>
+                {search
+                  ? "Check the spelling, try a shorter or more general word (like \u201cmug\u201d or \u201cplate\u201d), or clear your filters."
+                  : "Try removing a filter or widening the price range."}
+              </span>
+              <div className="catalogue-empty-links">
+                <span>Browse by category</span>
+                {categories.map((name) => (
+                  <Link key={name} href={`/products?category=${encodeURIComponent(name)}`}>
+                    {name}
+                  </Link>
+                ))}
+              </div>
             </div>
+            {picks.length > 0 && (
+              <div className="catalogue-empty-picks">
+                <p className="catalogue-label">YOU MIGHT LIKE</p>
+                <ProductCatalogue products={picks} />
+              </div>
+            )}
+            </>
           ) : (
             <>
               <ProductCatalogue products={products} />
@@ -337,6 +353,9 @@ export default async function ProductsPage({
                   minPrice: params.minPrice,
                   maxPrice: params.maxPrice,
                   inStock: inStock ? "1" : undefined,
+                  colour: colour || undefined,
+                  material: material || undefined,
+                  rating: minRating ? String(minRating) : undefined,
                   sort: sort === defaultSort ? undefined : sort,
                 }}
               />

@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import Razorpay from "razorpay";
 import { prisma } from "./prisma";
 import { releaseOrderInventory } from "./order-inventory";
+import type { OrderAccess } from "./order-access";
 
 // Unpaid orders hold stock; after this long they are cancelled and released.
 export const PAYMENT_WINDOW_MINUTES = 30;
@@ -105,16 +106,16 @@ export async function expireStaleOrders(customerId?: string) {
 }
 
 /**
- * Returns the Razorpay order to pay for one of the customer's orders, creating
- * it (from the database total, never a client-supplied amount) on first use.
+ * Returns the Razorpay order to pay for an order the visitor may access,
+ * creating it (from the database total, never a client-supplied amount) on first use.
  */
-export async function startPayment(customerId: string, orderId: string) {
+export async function startPayment(access: OrderAccess) {
   const { keyId } = getConfig();
 
-  await expireStaleOrders(customerId);
+  await expireStaleOrders(access.customerId);
 
   const order = await prisma.order.findFirst({
-    where: { orderId, customerId },
+    where: access,
     include: { payment: true },
   });
 
@@ -173,18 +174,17 @@ export async function startPayment(customerId: string, orderId: string) {
 }
 
 /**
- * Fallback when online payment keeps failing: turns one of the customer's
- * unpaid online orders into a confirmed Cash on Delivery order. The stock is
+ * Fallback when online payment keeps failing: turns an unpaid online order the
+ * visitor may access into a confirmed Cash on Delivery order. The stock is
  * already reserved, so nothing else changes. Returns the order's row id.
  */
-export async function switchToCashOnDelivery(customerId: string, orderId: string) {
-  await expireStaleOrders(customerId);
+export async function switchToCashOnDelivery(access: OrderAccess) {
+  await expireStaleOrders(access.customerId);
 
   const cutoff = new Date(Date.now() - PAYMENT_WINDOW_MINUTES * 60_000);
   const switched = await prisma.order.updateMany({
     where: {
-      orderId,
-      customerId,
+      ...access,
       paymentMethod: "ONLINE",
       status: "PENDING",
       paymentStatus: { in: ["PENDING", "FAILED"] },
@@ -194,7 +194,7 @@ export async function switchToCashOnDelivery(customerId: string, orderId: string
   });
 
   const order = await prisma.order.findFirst({
-    where: { orderId, customerId },
+    where: access,
     select: { id: true, paymentMethod: true, paymentStatus: true, status: true },
   });
   if (!order) throw new PaymentError("Order not found.", 404);

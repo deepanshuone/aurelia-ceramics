@@ -64,7 +64,8 @@ export async function verifyReviewsForOrder(orderRowId: string) {
     where: { id: orderRowId },
     select: { customerId: true, status: true, items: { select: { productId: true } } },
   });
-  if (!order || order.status !== "DELIVERED") return [];
+  // Guest checkout orders have no account, so no reviews to verify.
+  if (!order?.customerId || order.status !== "DELIVERED") return [];
   const productIds = order.items.map((item) => item.productId).filter((id): id is string => Boolean(id));
   if (productIds.length === 0) return [];
 

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { auth } from "../../auth";
 import { prisma } from "../../lib/prisma";
+import { estimateDelivery, formatDeliveryEstimate } from "../../lib/delivery-estimate";
+import { getStoreProcessingDays } from "../../lib/store-settings";
 import CheckoutForm from "./CheckoutForm";
 
 export const metadata: Metadata = {
@@ -11,31 +12,30 @@ export const metadata: Metadata = {
 
 export default async function CheckoutPage() {
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/login?callbackUrl=/checkout");
-  }
+  const deliveryEstimate = formatDeliveryEstimate(estimateDelivery(await getStoreProcessingDays()));
 
-  const customer = await prisma.customer.findUnique({
-    where: { id: session.user.id },
-    select: {
-      name: true,
-      phone: true,
-      email: true,
-      addresses: {
-        orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
-        select: { id: true, label: true, address: true, city: true, state: true, pin: true },
-      },
-    },
-  });
+  // Signed in: prefill contact details and saved addresses.
+  const customer = session?.user?.id
+    ? await prisma.customer.findUnique({
+        where: { id: session.user.id },
+        select: {
+          name: true,
+          phone: true,
+          email: true,
+          addresses: {
+            orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+            select: { id: true, label: true, address: true, city: true, state: true, pin: true },
+          },
+        },
+      })
+    : null;
 
-  if (!customer) {
-    redirect("/login?callbackUrl=/checkout");
-  }
-
+  // Anyone else checks out as a guest.
   return (
     <CheckoutForm
-      contact={{ name: customer.name, phone: customer.phone, email: customer.email }}
-      addresses={customer.addresses}
+      contact={customer ? { name: customer.name, phone: customer.phone, email: customer.email } : null}
+      addresses={customer?.addresses ?? []}
+      deliveryEstimate={deliveryEstimate}
     />
   );
 }

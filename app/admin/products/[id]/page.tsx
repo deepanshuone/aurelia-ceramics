@@ -7,6 +7,8 @@ import ProductForm from "../ProductForm";
 
 export const metadata: Metadata = { title: "Edit product" };
 
+const yesNo = (value: boolean | null) => (value === null ? "" : value ? "yes" : "no");
+
 export default async function EditProductPage({
   params,
   searchParams,
@@ -65,6 +67,20 @@ export default async function EditProductPage({
           description: product.description ?? "",
           specifications,
           images: product.images.map((image) => image.url).join("\n"),
+          details: {
+            dimensions: product.dimensions ?? "",
+            weight: product.weight ?? "",
+            material: product.material ?? "",
+            capacity: product.capacity ?? "",
+            colour: product.colour ?? "",
+            finish: product.finish ?? "",
+            whatsIncluded: product.whatsIncluded ?? "",
+            careInstructions: product.careInstructions ?? "",
+            foodSafe: yesNo(product.foodSafe),
+            microwaveSafe: yesNo(product.microwaveSafe),
+            dishwasherSafe: yesNo(product.dishwasherSafe),
+            returnable: product.returnable,
+          },
           isActive: product.isActive,
           isFeatured: product.isFeatured,
           orderCount: product._count.orderItems,

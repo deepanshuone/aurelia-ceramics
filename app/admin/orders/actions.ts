@@ -10,6 +10,7 @@ import { MAX_PROCESSING_DAYS } from "../../../lib/processing";
 import { type OrderStatusEmail, sendOrderStatusEmail } from "../../../lib/order-status-emails";
 import { PaymentError, refundRazorpayPayment } from "../../../lib/payments";
 import { prisma } from "../../../lib/prisma";
+import { verifyReviewsForOrder } from "../../../lib/reviews";
 
 const toPaise = (value: { toString(): string }) => Math.round(Number(value) * 100);
 
@@ -69,6 +70,10 @@ export async function updateOrderStatus(
   refresh(order.orderId);
   if (parsed.data.status === "SHIPPED" || parsed.data.status === "DELIVERED") {
     notifyCustomer(order.id, { kind: parsed.data.status });
+  }
+  // Reviews the customer wrote before it arrived now get the "Verified buyer" label.
+  if (parsed.data.status === "DELIVERED") {
+    for (const slug of await verifyReviewsForOrder(order.id)) revalidatePath(`/products/${slug}`);
   }
   return { success: "Status updated." };
 }

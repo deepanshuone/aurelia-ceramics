@@ -73,7 +73,7 @@ export default function QuickViewButton({ product }: { product: HomeProduct }) {
             <div className="quick-view-details">
               <p className="quick-view-category">{product.category}</p>
               <h3>{product.name}</h3>
-              {product.rating !== null && <StarRating rating={product.rating} count={product.reviewCount} />}
+              {product.rating !== null && <StarRating rating={product.rating} count={product.reviewCount || undefined} />}
 
               <div className="home-card-price quick-view-price">
                 <strong>{formatRupees(product.price)}</strong>

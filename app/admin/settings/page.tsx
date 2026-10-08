@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import { requirePermission } from "../../../lib/admin";
-import { getStoreProcessingDays, readDeliveryRules } from "../../../lib/store-settings";
+import { getStoreProcessingDays, readDeliveryRules, readShowSampleRatings } from "../../../lib/store-settings";
 import SettingsForm from "./SettingsForm";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function AdminSettingsPage() {
   await requirePermission("settings", "view");
-  const [processingDays, delivery] = await Promise.all([getStoreProcessingDays(), readDeliveryRules()]);
+  const [processingDays, delivery, showSampleRatings] = await Promise.all([
+    getStoreProcessingDays(),
+    readDeliveryRules(),
+    readShowSampleRatings(),
+  ]);
 
   return (
     <>
@@ -16,7 +20,7 @@ export default async function AdminSettingsPage() {
       </header>
 
       <section className="admin-panel">
-        <SettingsForm processingDays={processingDays} delivery={delivery} />
+        <SettingsForm processingDays={processingDays} delivery={delivery} showSampleRatings={showSampleRatings} />
       </section>
     </>
   );

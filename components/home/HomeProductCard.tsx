@@ -7,7 +7,7 @@ import { formatRupees } from "../../lib/order-display";
 import { discountPercent } from "./discount";
 import type { HomeProduct } from "../../lib/home";
 
-/** Homepage product card: photo, rating (real reviews only), price, discount, Add to cart and Quick View. */
+/** Homepage product card: photo, rating, price, discount, Add to cart and Quick View. */
 export default function HomeProductCard({ product, badge }: { product: HomeProduct; badge?: string }) {
   const off = discountPercent(product);
   return (
@@ -33,7 +33,7 @@ export default function HomeProductCard({ product, badge }: { product: HomeProdu
         <h3>
           <Link href={`/products/${product.slug}`}>{product.name}</Link>
         </h3>
-        {product.rating !== null && <StarRating rating={product.rating} count={product.reviewCount} />}
+        {product.rating !== null && <StarRating rating={product.rating} count={product.reviewCount || undefined} />}
         <div className="home-card-price">
           <strong>{formatRupees(product.price)}</strong>
           {off > 0 && product.mrp && <s>{formatRupees(product.mrp)}</s>}

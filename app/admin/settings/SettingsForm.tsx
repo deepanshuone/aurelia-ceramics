@@ -10,9 +10,11 @@ import { saveSettings } from "./actions";
 export default function SettingsForm({
   processingDays,
   delivery,
+  showSampleRatings,
 }: {
   processingDays: number;
   delivery: DeliveryRules;
+  showSampleRatings: boolean;
 }) {
   const [state, action] = useActionState(saveSettings, null);
 
@@ -55,6 +57,18 @@ export default function SettingsForm({
       <p className="admin-hint">
         Orders whose product total (before any coupon) is below the free delivery amount pay the delivery charge, for
         both online payment and Cash on Delivery. Set the charge to 0 to make all delivery free.
+      </p>
+
+      <h2>Product ratings</h2>
+      <div className="admin-checks">
+        <label>
+          <input name="showSampleRatings" type="checkbox" defaultChecked={showSampleRatings} /> Show sample ratings
+        </label>
+      </div>
+      <p className="admin-hint">
+        For previewing the design before launch: products with no reviews yet show a sample star rating between 3.5
+        and 4.8 (no review count, reviewer or text). Real customer reviews always replace the sample for that
+        product. Turn this off before the store takes real customers, so shoppers only see genuine ratings.
       </p>
 
       <SubmitButton>Save settings</SubmitButton>

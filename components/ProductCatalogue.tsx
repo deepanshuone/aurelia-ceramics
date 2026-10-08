@@ -1,6 +1,7 @@
 import Link from "next/link";
 import SmartImage from "./SmartImage";
 import QuickAddButton from "./QuickAddButton";
+import StarRating from "./home/StarRating";
 
 type Product = {
   id: string;
@@ -10,7 +11,10 @@ type Product = {
   price: number;
   mrp: number | null;
   stock: number;
+  /** Real average, or a sample rating (lib/sample-ratings.ts); null shows no stars. */
   rating: number | null;
+  /** Number of real reviews; 0 or missing hides the count. */
+  reviewCount?: number;
   category: { name: string };
   image: string;
   /** Optional highlight under the price, e.g. "Gets you FREE delivery". */
@@ -60,6 +64,8 @@ export default function ProductCatalogue({ products }: Props) {
               <del>₹{product.mrp.toLocaleString("en-IN")}</del>
             )}
           </div>
+
+          {product.rating !== null && <StarRating rating={product.rating} count={product.reviewCount || undefined} />}
 
           {product.note && <p className="catalogue-note">{product.note}</p>}
 

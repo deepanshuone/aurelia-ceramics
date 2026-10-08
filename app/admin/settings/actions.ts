@@ -25,6 +25,7 @@ const settingsSchema = z.object({
     .int("Delivery charge must be in whole rupees.")
     .min(0, "Delivery charge can't be negative.")
     .max(MAX_RUPEES, "Delivery charge is too large."),
+  showSampleRatings: z.boolean(),
 });
 
 export async function saveSettings(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -34,6 +35,7 @@ export async function saveSettings(_prev: ActionState, formData: FormData): Prom
     processingDays: formData.get("processingDays"),
     freeDeliveryThreshold: formData.get("freeDeliveryThreshold"),
     deliveryFee: formData.get("deliveryFee"),
+    showSampleRatings: formData.get("showSampleRatings") === "on",
   });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
 

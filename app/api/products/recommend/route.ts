@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { clientIp, rateLimit } from "../../../../lib/rate-limit";
+import { shownRating } from "../../../../lib/sample-ratings";
+import { getShowSampleRatings } from "../../../../lib/store-settings";
 
 // Product suggestions for the cart page (empty or filled).
 //   exclude  comma-separated slugs already in the cart
@@ -103,6 +105,7 @@ export async function GET(request: Request) {
     if (picked.length === limit) break;
   }
 
+  const showSampleRatings = await getShowSampleRatings();
   const products = picked.map(({ product, price }) => ({
     id: product.id,
     name: product.name,
@@ -111,7 +114,8 @@ export async function GET(request: Request) {
     price,
     mrp: product.mrp ? Number(product.mrp) : null,
     stock: product.stock,
-    rating: product.rating ? Number(product.rating) : null,
+    rating: shownRating(product, showSampleRatings).rating,
+    reviewCount: product.reviewCount,
     category: { name: product.category.name },
     image: product.images[0]?.url ?? "/placeholder-product.svg",
     note: need > 0 && price >= need ? "Gets you FREE delivery" : undefined,

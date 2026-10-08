@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { searchCategories, searchProducts } from "../../../lib/search";
+import { shownRating } from "../../../lib/sample-ratings";
+import { getShowSampleRatings } from "../../../lib/store-settings";
 import ProductCatalogue from "../../../components/ProductCatalogue";
 import ProductFilters from "../../../components/ProductFilters";
 import CataloguePagination from "../../../components/CataloguePagination";
@@ -161,6 +163,7 @@ const getCatalogue = unstable_cache(
       mrp: entry.mrp,
       stock: entry.stock,
       rating: entry.rating,
+      reviewCount: entry.reviewCount,
       category: { name: entry.category },
       image: entry.image,
     });
@@ -184,7 +187,7 @@ const getCatalogue = unstable_cache(
       picks: picks.map(toCard),
     };
   },
-  ["catalogue-v2"],
+  ["catalogue-v3"],
   { revalidate: 300, tags: ["products"] }
 );
 
@@ -210,8 +213,8 @@ export default async function ProductsPage({
   const ratingParam = Number.parseInt(params.rating ?? "", 10);
   const minRating = ratingParam >= 1 && ratingParam <= 5 ? ratingParam : 0;
 
-  const { products, picks, categories, categoryMatches, facets, totalProducts, totalPages, page, searchInfo } =
-    await getCatalogue({
+  const [catalogue, showSampleRatings] = await Promise.all([
+    getCatalogue({
     search,
     category,
     minPrice: params.minPrice ?? "",
@@ -222,7 +225,17 @@ export default async function ProductsPage({
     minRating,
     sort,
     page: Number.isFinite(requestedPage) ? requestedPage : 1,
-    });
+    }),
+    getShowSampleRatings(),
+  ]);
+  const { categories, categoryMatches, facets, totalProducts, totalPages, page, searchInfo } = catalogue;
+  // Sample ratings are added after the cache, so switching them off takes effect at once.
+  const withRating = (card: (typeof catalogue.products)[number]) => ({
+    ...card,
+    rating: shownRating(card, showSampleRatings).rating,
+  });
+  const products = catalogue.products.map(withRating);
+  const picks = catalogue.picks.map(withRating);
 
   return (
     <main className="products-page">

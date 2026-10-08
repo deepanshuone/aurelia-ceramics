@@ -274,28 +274,6 @@
   width: 100%;
 }
 
-.star-rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.star-rating-stars {
-  color: #b7822f;
-  letter-spacing: 1px;
-}
-
-.star-rating-empty {
-  color: #d8d1c4;
-}
-
-.star-rating-count {
-  color: var(--muted);
-  font-weight: 400;
-}
-
 /* NEW ARRIVALS */
 
 .new-arrivals {

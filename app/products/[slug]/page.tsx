@@ -13,7 +13,8 @@ import { reviewPhotoUrl, reviewerDisplayName } from "../../../lib/reviews";
 import { formatOrderDate } from "../../../lib/order-display";
 import { SITE_NAME, getSiteUrl, jsonLd } from "../../../lib/site";
 import { POLICY, whatsappLink } from "../../../lib/business";
-import { getDeliveryRules, getDisplayProcessingDays } from "../../../lib/store-settings";
+import { getDeliveryRules, getDisplayProcessingDays, getShowSampleRatings } from "../../../lib/store-settings";
+import { shownRating } from "../../../lib/sample-ratings";
 import { buildProductDetails } from "../../../lib/product-details";
 import { estimateDelivery, formatDeliveryDate } from "../../../lib/delivery-estimate";
 
@@ -79,10 +80,11 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;
-  const [product, delivery, processingDays] = await Promise.all([
+  const [product, delivery, processingDays, showSampleRatings] = await Promise.all([
     getProduct(slug),
     getDeliveryRules(),
     getDisplayProcessingDays(),
+    getShowSampleRatings(),
   ]);
 
   if (!product) {
@@ -91,7 +93,8 @@ export default async function ProductPage({ params }: PageProps) {
 
   const price = Number(product.price);
   const mrp = product.mrp ? Number(product.mrp) : null;
-  const rating = product.rating ? Number(product.rating) : null;
+  // The real average, or a sample rating while Admin → Settings allows it (no review count then).
+  const { rating, isSample: isSampleRating } = shownRating(product, showSampleRatings);
   const discount =
     mrp && mrp > price ? Math.round(((mrp - price) / mrp) * 100) : null;
 
@@ -167,8 +170,8 @@ export default async function ProductPage({ params }: PageProps) {
       category: product.category.name,
       image: product.images.map((image) => absolute(image.url)),
       brand: { "@type": "Brand", name: SITE_NAME },
-      // Only real customer reviews are marked up as ratings.
-      ...(rating !== null && product.reviewCount > 0
+      // Only real customer reviews are marked up as ratings, never sample ones.
+      ...(rating !== null && !isSampleRating && product.reviewCount > 0
         ? {
             aggregateRating: {
               "@type": "AggregateRating",
@@ -238,7 +241,9 @@ export default async function ProductPage({ params }: PageProps) {
               <div className="product-rating">
                 <span>{"★".repeat(Math.round(rating))}</span>
                 <a href="#reviews">
-                  {rating.toFixed(1)} ({product.reviewCount} {product.reviewCount === 1 ? "review" : "reviews"})
+                  {rating.toFixed(1)}
+                  {product.reviewCount > 0 &&
+                    ` (${product.reviewCount} ${product.reviewCount === 1 ? "review" : "reviews"})`}
                 </a>
               </div>
             )}
@@ -517,7 +522,8 @@ export default async function ProductPage({ params }: PageProps) {
                 price: Number(related.price),
                 mrp: related.mrp ? Number(related.mrp) : null,
                 stock: related.stock,
-                rating: related.rating ? Number(related.rating) : null,
+                rating: shownRating(related, showSampleRatings).rating,
+                reviewCount: related.reviewCount,
                 category: { name: product.category.name },
                 image: related.images[0]?.url ?? "/placeholder-product.svg",
               }))}

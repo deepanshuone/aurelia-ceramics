@@ -1,6 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { z } from "zod";
-import { auth } from "../../../../../auth";
+import { orderAccessWhere } from "../../../../../lib/order-access";
 import { prisma } from "../../../../../lib/prisma";
 import {
   PaymentError,
@@ -13,17 +13,13 @@ const schema = z.object({
   razorpay_order_id: z.string().min(1).max(100),
   razorpay_payment_id: z.string().min(1).max(100),
   razorpay_signature: z.string().min(1).max(200),
+  // Guest orders: the signed link's token.
+  token: z.string().max(100).optional(),
 });
 
 // Called by the browser with Razorpay Checkout's success response. The
 // signature proves the payment came from Razorpay for the order we created.
 export async function POST(request: Request) {
-  const session = await auth();
-  const customerId = session?.user?.id;
-  if (!customerId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const parsed = schema.safeParse(await request.json().catch(() => undefined));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid payment response." }, { status: 400 });
@@ -34,7 +30,8 @@ export async function POST(request: Request) {
     where: { razorpayOrderId: razorpay_order_id },
     select: { order: { select: { orderId: true, customerId: true } } },
   });
-  if (!payment || payment.order.customerId !== customerId) {
+  const access = payment && (await orderAccessWhere(payment.order.orderId, parsed.data.token));
+  if (!payment || !access || (access.customerId && payment.order.customerId !== access.customerId)) {
     return NextResponse.json({ error: "Payment not found." }, { status: 404 });
   }
 

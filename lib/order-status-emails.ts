@@ -2,7 +2,7 @@ import { BUSINESS, POLICY } from "./business";
 import { sendEmail } from "./email";
 import { emailLayout, escapeHtml as esc } from "./email-layout";
 import { prisma } from "./prisma";
-import { getSiteUrl } from "./site";
+import { orderPageUrl } from "./order-access";
 
 // Emails the customer receives as an admin moves their order along:
 // shipped, tracking added, delivered, cancelled and refunded.
@@ -30,7 +30,7 @@ type OrderRow = NonNullable<Awaited<ReturnType<typeof loadOrder>>>;
 
 export function buildOrderStatusEmail(order: OrderRow, event: OrderStatusEmail) {
   const firstName = (order.shippingName ?? "").trim().split(/\s+/)[0] || "there";
-  const orderUrl = `${getSiteUrl()}/account/orders/${encodeURIComponent(order.orderId)}`;
+  const orderUrl = orderPageUrl(order);
   const items = order.items.map((item) => `${item.quantity} × ${item.name}`);
   const itemsHtml = `<ul style="margin:10px 0 0;padding-left:20px;color:#46423c;">${items.map((line) => `<li>${esc(line)}</li>`).join("")}</ul>`;
   const idLine = `<p style="margin:0 0 8px;color:#746f67;font-size:13px;">Order ID: <strong style="color:#171614;">${esc(order.orderId)}</strong></p>`;

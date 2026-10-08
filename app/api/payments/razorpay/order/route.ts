@@ -1,25 +1,28 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "../../../../../auth";
+import { orderAccessWhere } from "../../../../../lib/order-access";
 import { PaymentError, startPayment } from "../../../../../lib/payments";
 
-const schema = z.object({ orderId: z.string().trim().min(1).max(40) });
+const schema = z.object({
+  orderId: z.string().trim().min(1).max(40),
+  // Guest orders: the signed link's token.
+  token: z.string().max(100).optional(),
+});
 
-// Returns the Razorpay Checkout parameters for one of the customer's orders.
+// Returns the Razorpay Checkout parameters for an order the visitor may access.
 export async function POST(request: Request) {
-  const session = await auth();
-  const customerId = session?.user?.id;
-  if (!customerId) {
-    return NextResponse.json({ error: "Please log in to pay for your order." }, { status: 401 });
-  }
-
   const parsed = schema.safeParse(await request.json().catch(() => undefined));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid order." }, { status: 400 });
   }
 
+  const access = await orderAccessWhere(parsed.data.orderId, parsed.data.token);
+  if (!access) {
+    return NextResponse.json({ error: "Please log in to pay for your order." }, { status: 401 });
+  }
+
   try {
-    return NextResponse.json(await startPayment(customerId, parsed.data.orderId));
+    return NextResponse.json(await startPayment(access));
   } catch (error) {
     if (error instanceof PaymentError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

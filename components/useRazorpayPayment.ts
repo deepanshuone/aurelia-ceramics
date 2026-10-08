@@ -87,11 +87,12 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 export function useRazorpayPayment() {
   const [paying, setPaying] = useState(false);
 
-  const pay = useCallback(async (orderId: string): Promise<PaymentOutcome> => {
+  // `accessToken` is the signed link's token for guest orders (no login).
+  const pay = useCallback(async (orderId: string, accessToken?: string): Promise<PaymentOutcome> => {
     setPaying(true);
     try {
       const [params] = await Promise.all([
-        postJson<StartResponse>("/api/payments/razorpay/order", { orderId }),
+        postJson<StartResponse>("/api/payments/razorpay/order", { orderId, token: accessToken }),
         loadCheckoutScript(),
       ]);
 
@@ -111,7 +112,7 @@ export function useRazorpayPayment() {
           prefill: params.prefill,
           theme: { color: "#171614" },
           handler: (response) => {
-            postJson<{ orderId: string }>("/api/payments/razorpay/verify", response)
+            postJson<{ orderId: string }>("/api/payments/razorpay/verify", { ...response, token: accessToken })
               .then((result) => resolve({ status: "paid", orderId: result.orderId }))
               .catch((error: Error) =>
                 resolve({

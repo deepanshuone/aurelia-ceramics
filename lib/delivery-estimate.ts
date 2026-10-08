@@ -36,3 +36,8 @@ export function formatDeliveryDate(date: Date) {
     month: "short",
   }).format(date);
 }
+
+/** e.g. "Tue, 14 Oct – Sat, 18 Oct", for checkout and order pages. */
+export function formatDeliveryEstimate({ earliest, latest }: { earliest: Date; latest: Date }) {
+  return `${formatDeliveryDate(earliest)} – ${formatDeliveryDate(latest)}`;
+}

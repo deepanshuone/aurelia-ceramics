@@ -38,3 +38,18 @@ export const getDisplayProcessingDays = unstable_cache(getStoreProcessingDays, [
   revalidate: 600,
   tags: [STORE_SETTINGS_TAG],
 });
+
+/** Whether products without reviews show a sample rating (lib/sample-ratings.ts). */
+export async function readShowSampleRatings() {
+  const setting = await prisma.storeSetting.findUnique({
+    where: { id: "store" },
+    select: { showSampleRatings: true },
+  });
+  return setting?.showSampleRatings ?? false;
+}
+
+/** Cached like getDeliveryRules; saving Admin → Settings refreshes it. */
+export const getShowSampleRatings = unstable_cache(readShowSampleRatings, ["show-sample-ratings"], {
+  revalidate: 600,
+  tags: [STORE_SETTINGS_TAG],
+});

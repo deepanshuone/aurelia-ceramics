@@ -400,5 +400,7 @@ model StoreSetting {
   // What Editors and Viewers may see or change, per admin area (lib/permissions.ts).
   // Null means the built-in defaults.
   rolePermissions       Json?
+  // Show sample star ratings on products that have no reviews yet (lib/sample-ratings.ts).
+  showSampleRatings     Boolean  @default(false)
   updatedAt             DateTime @updatedAt
 }

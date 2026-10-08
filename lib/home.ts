@@ -1,5 +1,7 @@
 import { prisma } from "./prisma";
 import type { OrderStatus } from "./generated/prisma/client";
+import { shownRating } from "./sample-ratings";
+import { getShowSampleRatings } from "./store-settings";
 
 /** Product shape used by the homepage cards and Quick View. */
 export type HomeProduct = {
@@ -9,7 +11,7 @@ export type HomeProduct = {
   price: number;
   mrp: number | null;
   stock: number;
-  /** Average of real customer reviews; null until the first review. */
+  /** Average of real customer reviews (or a sample rating when Admin → Settings allows); null otherwise. */
   rating: number | null;
   reviewCount: number;
   description: string | null;
@@ -41,7 +43,7 @@ function findProducts(args: Omit<NonNullable<Parameters<typeof prisma.product.fi
   return prisma.product.findMany({ ...args, select: productSelect });
 }
 
-function toHomeProduct(row: Row): HomeProduct {
+function toHomeProduct(row: Row, showSampleRatings: boolean): HomeProduct {
   return {
     slug: row.slug,
     name: row.name,
@@ -49,7 +51,7 @@ function toHomeProduct(row: Row): HomeProduct {
     price: Number(row.price),
     mrp: row.mrp ? Number(row.mrp) : null,
     stock: row.stock,
-    rating: row.reviewCount > 0 && row.rating ? Number(row.rating) : null,
+    rating: shownRating(row, showSampleRatings).rating,
     reviewCount: row.reviewCount,
     description: row.description,
     images: row.images.map((image) => image.url),
@@ -58,8 +60,11 @@ function toHomeProduct(row: Row): HomeProduct {
 
 /** The newest in-stock products. */
 export async function getNewArrivals(limit: number) {
-  const rows = await findProducts({ where: visible, orderBy: { createdAt: "desc" }, take: limit });
-  return rows.map(toHomeProduct);
+  const [rows, showSamples] = await Promise.all([
+    findProducts({ where: visible, orderBy: { createdAt: "desc" }, take: limit }),
+    getShowSampleRatings(),
+  ]);
+  return rows.map((row) => toHomeProduct(row, showSamples));
 }
 
 /**
@@ -91,7 +96,11 @@ export async function getBestSellers(limit: number, exclude: string[] = []) {
         })
       : [];
 
-  return { products: [...sellers, ...extras].map(toHomeProduct), soldCount: sellers.length };
+  const showSamples = await getShowSampleRatings();
+  return {
+    products: [...sellers, ...extras].map((row) => toHomeProduct(row, showSamples)),
+    soldCount: sellers.length,
+  };
 }
 
 /** Real catalogue numbers for the brand story. */

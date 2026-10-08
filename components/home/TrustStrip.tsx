@@ -66,7 +66,7 @@ export default function TrustStrip({ delivery, onlinePayments }: { delivery: Del
     {
       icon: ICONS.returns,
       title: "Easy Returns",
-      text: `${POLICY.returnDays}-day returns, free replacement if broken in transit`,
+      text: `${POLICY.returnHours} hr return or replacement, free replacement if broken in transit`,
       href: "/return-refund-policy",
     },
   ];

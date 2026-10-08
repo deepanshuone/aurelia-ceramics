@@ -32,7 +32,7 @@ function ShoppingInfo({ delivery }: { delivery: DeliveryRules }) {
                 <span>or pay securely online</span>
             </li>
             <li>
-                <strong>{POLICY.returnDays}-day returns</strong>
+                <strong>{POLICY.returnHours} hr return or replacement</strong>
                 <span>free replacement if damaged</span>
             </li>
         </ul>

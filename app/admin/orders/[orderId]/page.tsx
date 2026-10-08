@@ -194,11 +194,19 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ ord
         <div>
           <section className="admin-panel">
             <h2>Customer</h2>
-            <p className="admin-detail">
-              <Link href={`/admin/customers/${order.customer.id}`}>{order.customer.name}</Link>
-              <br />
-              {order.customer.email}
-            </p>
+            {order.customer ? (
+              <p className="admin-detail">
+                <Link href={`/admin/customers/${order.customer.id}`}>{order.customer.name}</Link>
+                <br />
+                {order.customer.email}
+              </p>
+            ) : (
+              <p className="admin-detail">
+                Guest checkout (no account)
+                <br />
+                {order.shippingEmail}
+              </p>
+            )}
           </section>
 
           <section className="admin-panel">

@@ -38,6 +38,7 @@ export default async function Footer() {
           <h2 className="footer-heading">Explore</h2>
           <Link href="/products">Products</Link>
           <Link href="/about">About Us</Link>
+          <Link href="/track-order">Track Order</Link>
           <Link href="/contact">Contact</Link>
         </div>
 

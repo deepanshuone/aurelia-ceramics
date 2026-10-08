@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { prisma } from "./prisma";
-import { getCustomerCart } from "./cart-server";
+import { getCustomerCart, resolveGuestCart, type CartRequestItem } from "./cart-server";
 import type { CartLine } from "./cart";
 import { expireStaleOrders, isOnlinePaymentConfigured } from "./payments";
 import { readDeliveryRules } from "./store-settings";
@@ -43,6 +43,17 @@ export class CheckoutError extends Error {
   ) {
     super(message);
   }
+}
+
+/**
+ * Who is checking out: a signed-in customer (cart saved in the database) or a
+ * guest (cart sent by the browser as product + quantity; prices always come
+ * from the database).
+ */
+export type Buyer = { customerId: string } | { guestItems: CartRequestItem[] };
+
+function loadCart(buyer: Buyer) {
+  return "customerId" in buyer ? getCustomerCart(buyer.customerId) : resolveGuestCart(buyer.guestItems);
 }
 
 // All money maths is done in integer paise to avoid floating-point drift.
@@ -101,12 +112,12 @@ async function resolveCoupon(code: string, subtotalPaise: number) {
 }
 
 /**
- * Prices the customer's saved cart entirely from the database. Throws if the
+ * Prices the buyer's cart entirely from the database. Throws if the
  * cart is empty, contains unavailable items, or had to be adjusted for stock —
  * the customer must review those changes before paying.
  */
-export async function quoteCheckout(customerId: string, couponCode?: string): Promise<Quote> {
-  const cart = await getCustomerCart(customerId);
+export async function quoteCheckout(buyer: Buyer, couponCode?: string): Promise<Quote> {
+  const cart = await loadCart(buyer);
 
   if (cart.items.length === 0) {
     throw new CheckoutError("Your cart is empty.", 400, "EMPTY_CART");
@@ -166,12 +177,14 @@ function generateOrderId() {
 }
 
 export async function placeOrder(input: {
-  customerId: string;
+  buyer: Buyer;
   shipping: z.infer<typeof shippingSchema>;
   couponCode?: string;
   expectedTotal: number;
   saveAddress: boolean;
   paymentMethod: "ONLINE" | "COD";
+  /** Guest checkout only: see Order.checkoutKey. */
+  checkoutKey?: string;
 }) {
   // Don't create an order that could never be paid for.
   if (input.paymentMethod === "ONLINE" && !isOnlinePaymentConfigured()) {
@@ -182,19 +195,27 @@ export async function placeOrder(input: {
     );
   }
 
-  // Login tokens outlive an admin blocking the account, so check it here.
-  const customer = await prisma.customer.findUnique({
-    where: { id: input.customerId },
-    select: { isActive: true },
-  });
-  if (!customer?.isActive) {
-    throw new CheckoutError("Your account can't place orders. Please contact us.", 403, "ACCOUNT_BLOCKED");
+  const customerId = "customerId" in input.buyer ? input.buyer.customerId : null;
+
+  if (customerId) {
+    // Login tokens outlive an admin blocking the account, so check it here.
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { isActive: true },
+    });
+    if (!customer?.isActive) {
+      throw new CheckoutError("Your account can't place orders. Please contact us.", 403, "ACCOUNT_BLOCKED");
+    }
+  } else if (input.checkoutKey) {
+    // A guest's double click or retry: hand back the order already placed.
+    const existing = await findGuestOrder(input.checkoutKey, input.shipping.email);
+    if (existing) return existing;
   }
 
   // Release stock held by abandoned unpaid orders before checking availability.
   await expireStaleOrders();
 
-  const quote = await quoteCheckout(input.customerId, input.couponCode);
+  const quote = await quoteCheckout(input.buyer, input.couponCode);
 
   if (toPaise(quote.total) !== toPaise(input.expectedTotal)) {
     throw new CheckoutError(
@@ -206,19 +227,61 @@ export async function placeOrder(input: {
 
   const { shipping } = input;
 
+  try {
+    return await createOrder(input, customerId, quote);
+  } catch (error) {
+    // The same guest checkout won a race with this request: return its order.
+    if (!customerId && input.checkoutKey && isUniqueViolation(error)) {
+      const existing = await findGuestOrder(input.checkoutKey, shipping.email);
+      if (existing) return existing;
+      throw new CheckoutError("Please refresh the page and try again.", 409, "CART_CHANGED");
+    }
+    throw error;
+  }
+}
+
+function isUniqueViolation(error: unknown) {
+  return typeof error === "object" && error !== null && (error as { code?: string }).code === "P2002";
+}
+
+async function findGuestOrder(checkoutKey: string, email: string) {
+  const order = await prisma.order.findUnique({
+    where: { checkoutKey },
+    select: { orderId: true, total: true, customerId: true, shippingEmail: true, items: { select: { product: { select: { slug: true } } } } },
+  });
+  // The key is random per checkout page, so this only matches a retry of the same order.
+  if (!order || order.customerId || order.shippingEmail !== email) return null;
+  return {
+    orderId: order.orderId,
+    total: Number(order.total),
+    slugs: order.items.flatMap((item) => (item.product ? [item.product.slug] : [])),
+    guest: true,
+  };
+}
+
+async function createOrder(
+  input: Parameters<typeof placeOrder>[0],
+  customerId: string | null,
+  quote: Quote
+) {
+  const { shipping } = input;
+
   return prisma.$transaction(
     async (tx) => {
-      // Claim this exact cart first. A double click or a second tab running the
-      // same checkout waits here, then finds the lines already gone and stops,
-      // so one cart can only ever become one order.
-      const claimedLines = await tx.cartItem.deleteMany({
-        where: {
-          cart: { customerId: input.customerId },
-          OR: quote.items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
-        },
-      });
-      if (claimedLines.count !== quote.items.length) {
-        throw new CheckoutError("Your cart changed. Please review it and try again.", 409, "CART_CHANGED");
+      if (customerId) {
+        // Claim this exact cart first. A double click or a second tab running the
+        // same checkout waits here, then finds the lines already gone and stops,
+        // so one cart can only ever become one order. (Guest carts live in the
+        // browser; their retries are caught by checkoutKey instead.)
+        const claimedLines = await tx.cartItem.deleteMany({
+          where: {
+            cart: { customerId },
+            OR: quote.items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+          },
+        });
+        if (claimedLines.count !== quote.items.length) {
+          throw new CheckoutError("Your cart changed. Please review it and try again.", 409, "CART_CHANGED");
+        }
       }
 
       // Conditional decrements: if another order took the stock first, the
@@ -254,7 +317,8 @@ export async function placeOrder(input: {
       const order = await tx.order.create({
         data: {
           orderId: generateOrderId(),
-          customerId: input.customerId,
+          customerId,
+          checkoutKey: customerId ? null : input.checkoutKey,
           paymentMethod: input.paymentMethod,
           // COD orders are confirmed straight away; online orders wait for payment.
           status: input.paymentMethod === "COD" ? "CONFIRMED" : "PENDING",
@@ -283,10 +347,10 @@ export async function placeOrder(input: {
         select: { orderId: true, total: true },
       });
 
-      if (input.saveAddress) {
+      if (customerId && input.saveAddress) {
         const existing = await tx.address.findFirst({
           where: {
-            customerId: input.customerId,
+            customerId,
             address: shipping.address,
             city: shipping.city,
             state: shipping.state,
@@ -295,10 +359,10 @@ export async function placeOrder(input: {
           select: { id: true },
         });
         if (!existing) {
-          const count = await tx.address.count({ where: { customerId: input.customerId } });
+          const count = await tx.address.count({ where: { customerId } });
           await tx.address.create({
             data: {
-              customerId: input.customerId,
+              customerId,
               address: shipping.address,
               city: shipping.city,
               state: shipping.state,
@@ -309,7 +373,12 @@ export async function placeOrder(input: {
         }
       }
 
-      return { orderId: order.orderId, total: Number(order.total), slugs: quote.items.map((item) => item.slug) };
+      return {
+        orderId: order.orderId,
+        total: Number(order.total),
+        slugs: quote.items.map((item) => item.slug),
+        guest: !customerId,
+      };
     },
     { timeout: 20000 }
   );

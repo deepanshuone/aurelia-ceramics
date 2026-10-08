@@ -206,8 +206,13 @@ model CartItem {
 model Order {
   id              String      @id @default(cuid())
   orderId         String      @unique
-  customerId      String
-  customer        Customer    @relation(fields: [customerId], references: [id])
+  // Null for guest checkout: the order is reached through a signed link
+  // (lib/order-access.ts) instead of an account.
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  // Random key the guest checkout page sends with its order, so a double
+  // submit returns the first order instead of creating a second one.
+  checkoutKey     String?     @unique
   items           OrderItem[]
 
   subtotal        Decimal     @db.Decimal(10, 2)

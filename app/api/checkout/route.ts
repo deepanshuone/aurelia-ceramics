@@ -8,7 +8,9 @@ import {
   placeOrder,
   shippingSchema,
 } from "../../../lib/checkout-server";
-import { rateLimit } from "../../../lib/rate-limit";
+import { cartRequestListSchema } from "../../../lib/cart-server";
+import { orderAccessToken } from "../../../lib/order-access";
+import { clientIp, rateLimit } from "../../../lib/rate-limit";
 import { prisma } from "../../../lib/prisma";
 import { sendOrderConfirmationEmails } from "../../../lib/order-emails";
 
@@ -18,16 +20,18 @@ const checkoutSchema = z.object({
   expectedTotal: z.number().nonnegative(),
   saveAddress: z.boolean().optional().default(false),
   paymentMethod: z.enum(["ONLINE", "COD"]).optional().default("ONLINE"),
+  // Guest checkout only (ignored when signed in): the browser's cart and a
+  // random key for this checkout so retries can't create a second order.
+  items: cartRequestListSchema.shape.items.optional(),
+  checkoutKey: z.string().regex(/^[A-Za-z0-9-]{16,64}$/).optional(),
 });
 
 export async function POST(request: Request) {
   const session = await auth();
   const customerId = session?.user?.id;
-  if (!customerId) {
-    return NextResponse.json({ error: "Please log in to place your order." }, { status: 401 });
-  }
 
-  if (!rateLimit(`checkout:${customerId}`, 10, 10 * 60 * 1000).allowed) {
+  const limitKey = customerId ? `checkout:${customerId}` : `checkout:guest:${clientIp(request.headers)}`;
+  if (!rateLimit(limitKey, 10, 10 * 60 * 1000).allowed) {
     return NextResponse.json({ error: "Too many orders in a short time. Please wait a few minutes." }, { status: 429 });
   }
 
@@ -46,8 +50,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const { items, checkoutKey, ...details } = parsed.data;
+  if (!customerId && (!items || !checkoutKey)) {
+    return NextResponse.json({ error: "Please refresh the page and try again." }, { status: 400 });
+  }
+
   try {
-    const { slugs, ...order } = await placeOrder({ customerId, ...parsed.data });
+    const { slugs, guest, ...order } = await placeOrder({
+      ...details,
+      buyer: customerId ? { customerId } : { guestItems: items! },
+      checkoutKey: customerId ? undefined : checkoutKey,
+    });
 
     // Stock just changed: refresh the cached product pages so they don't keep
     // showing "in stock" for items that were just bought.
@@ -61,7 +74,10 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json(order, { status: 201 });
+    // Guests have no account, so this signed link is how they get back to the order.
+    return NextResponse.json(guest ? { ...order, accessToken: orderAccessToken(order.orderId) } : order, {
+      status: 201,
+    });
   } catch (error) {
     if (error instanceof CheckoutError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });

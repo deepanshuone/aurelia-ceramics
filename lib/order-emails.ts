@@ -2,6 +2,7 @@ import { BUSINESS, POLICY } from "./business";
 import { getStoreProcessingDays } from "./store-settings";
 import { sendEmail } from "./email";
 import { prisma } from "./prisma";
+import { orderPageUrl } from "./order-access";
 import { getSiteUrl } from "./site";
 
 // Email-safe HTML: every customer-entered value goes through this.
@@ -40,9 +41,8 @@ function paymentLine(order: OrderForEmail) {
  * back to the general dispatch promise.
  */
 export function buildConfirmationEmail(order: OrderForEmail, processingDays?: number) {
-  const site = getSiteUrl();
   const firstName = (order.shippingName ?? "").trim().split(/\s+/)[0] || "there";
-  const orderUrl = `${site}/account/orders/${encodeURIComponent(order.orderId)}`;
+  const orderUrl = orderPageUrl(order);
   const payment = paymentLine(order);
   const discount = Number(order.discount);
   const delivery = Number(order.delivery);

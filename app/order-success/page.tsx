@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { auth } from "../../auth";
 import { prisma } from "../../lib/prisma";
 import PayNowButton from "../../components/PayNowButton";
 import CodFallbackButton from "../../components/CodFallbackButton";
+import CheckoutSteps from "../../components/CheckoutSteps";
+import { estimateDelivery, formatDeliveryEstimate } from "../../lib/delivery-estimate";
+import { orderAccessWhere } from "../../lib/order-access";
+import { orderDetailPath } from "../../lib/order-links";
 import { formatOrderDate, formatRupees } from "../../lib/order-display";
+import { getStoreProcessingDays } from "../../lib/store-settings";
 import {
   EXPIRED_REASON,
   PAYMENT_WINDOW_MINUTES,
@@ -21,22 +24,21 @@ export const metadata: Metadata = {
 export default async function OrderSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ orderId?: string; payment?: string }>;
+  searchParams: Promise<{ orderId?: string; payment?: string; t?: string }>;
 }) {
-  const { orderId, payment } = await searchParams;
-  const session = await auth();
+  const { orderId, payment, t } = await searchParams;
 
-  if (!session?.user?.id) {
-    redirect("/login?callbackUrl=/account/orders");
-  }
+  // The signed-in customer's own order, or a guest order through its signed
+  // link: an order ID alone never shows anything.
+  const access = orderId ? await orderAccessWhere(orderId, t) : null;
+  // Guest orders keep their token on every link from here.
+  const token = access && !access.customerId ? t : undefined;
 
-  await expireStaleOrders(session.user.id);
+  if (access) await expireStaleOrders(access.customerId);
 
-  // Scoped to the logged-in customer so order IDs can't be used to peek at
-  // someone else's order.
-  const order = orderId
+  const order = access
     ? await prisma.order.findFirst({
-        where: { orderId, customerId: session.user.id },
+        where: access,
         select: {
           orderId: true,
           total: true,
@@ -46,6 +48,8 @@ export default async function OrderSuccessPage({
           createdAt: true,
           shippingEmail: true,
           cancelReason: true,
+          confirmedAt: true,
+          processingDays: true,
         },
       })
     : null;
@@ -55,15 +59,26 @@ export default async function OrderSuccessPage({
       <main className="order-success-page">
         <div className="success-card">
           <h1>No Order Found</h1>
-          <p>We could not find this order on your account.</p>
+          <p>
+            We could not find this order. If you checked out as a guest, open the link in your order
+            email, or find it on the Track Order page.
+          </p>
 
-          <Link href="/products" className="success-btn">
-            Continue Shopping
-          </Link>
+          <div className="success-actions">
+            <Link href="/track-order" className="success-btn">
+              Track Order
+            </Link>
+
+            <Link href="/products" className="secondary-btn">
+              Continue Shopping
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
+
+  const detailHref = orderDetailPath(order.orderId, token);
 
   // A payment can land after the order was cancelled (refund pending), so
   // "paid" alone doesn't mean the order is going ahead.
@@ -90,10 +105,17 @@ export default async function OrderSuccessPage({
     </div>
   );
 
+  const confirmedEstimate = async () =>
+    formatDeliveryEstimate(
+      estimateDelivery(order.processingDays ?? (await getStoreProcessingDays()), order.confirmedAt ?? order.createdAt)
+    );
+
   if (order.paymentMethod === "COD" && !cancelled) {
+    const estimate = await confirmedEstimate();
     return (
       <main className="order-success-page">
         <div className="success-card">
+          <CheckoutSteps current="Confirmed" />
           <div className="success-icon">✓</div>
 
           <p className="success-label">ORDER CONFIRMED</p>
@@ -108,11 +130,12 @@ export default async function OrderSuccessPage({
           {details}
 
           <p className="delivery-message">
-            We will email {order.shippingEmail} when your order ships.
+            Expected delivery: <strong>{estimate}</strong>. We will email {order.shippingEmail} when your
+            order ships{token ? ", with a link to track it" : ""}.
           </p>
 
           <div className="success-actions">
-            <Link href={`/account/orders/${order.orderId}`} className="success-btn">
+            <Link href={detailHref} className="success-btn">
               View Order
             </Link>
 
@@ -126,9 +149,11 @@ export default async function OrderSuccessPage({
   }
 
   if (paid) {
+    const estimate = await confirmedEstimate();
     return (
       <main className="order-success-page">
         <div className="success-card">
+          <CheckoutSteps current="Confirmed" />
           <div className="success-icon">✓</div>
 
           <p className="success-label">PAYMENT RECEIVED</p>
@@ -142,11 +167,12 @@ export default async function OrderSuccessPage({
           {details}
 
           <p className="delivery-message">
-            We will email {order.shippingEmail} when your order ships.
+            Expected delivery: <strong>{estimate}</strong>. We will email {order.shippingEmail} when your
+            order ships{token ? ", with a link to track it" : ""}.
           </p>
 
           <div className="success-actions">
-            <Link href={`/account/orders/${order.orderId}`} className="success-btn">
+            <Link href={detailHref} className="success-btn">
               View Order
             </Link>
 
@@ -186,15 +212,16 @@ export default async function OrderSuccessPage({
           <div className="success-actions">
             <PayNowButton
               orderId={order.orderId}
+              accessToken={token}
               label={payment === "failed" ? `Try Again · ${formatRupees(order.total)}` : `Pay ${formatRupees(order.total)}`}
               className="success-btn"
             />
 
-            <CodFallbackButton orderId={order.orderId} />
+            <CodFallbackButton orderId={order.orderId} accessToken={token} />
           </div>
 
           <p className="delivery-message">
-            <Link href={`/account/orders/${order.orderId}`}>View order details</Link>
+            <Link href={detailHref}>View order details</Link>
           </p>
         </div>
       </main>
@@ -221,7 +248,7 @@ export default async function OrderSuccessPage({
             Shop Again
           </Link>
 
-          <Link href={`/account/orders/${order.orderId}`} className="secondary-btn">
+          <Link href={detailHref} className="secondary-btn">
             View Order
           </Link>
         </div>

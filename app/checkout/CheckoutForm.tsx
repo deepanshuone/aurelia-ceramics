@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart } from "../../components/CartProvider";
+import CheckoutSteps from "../../components/CheckoutSteps";
 import type { CartLine } from "../../lib/cart";
 import { INDIAN_STATES } from "../../lib/indian-states";
+import { orderSuccessPath, rememberDeviceOrder } from "../../lib/order-links";
 import { useRazorpayPayment } from "../../components/useRazorpayPayment";
 
 type SavedAddress = {
@@ -32,11 +34,28 @@ type PaymentMethod = "ONLINE" | "COD";
 type ApiError = { error: string; code?: string };
 
 type CheckoutFormProps = {
-    contact: { name: string; phone: string; email: string };
+    /** Null for guest checkout. */
+    contact: { name: string; phone: string; email: string } | null;
     addresses: SavedAddress[];
+    /** e.g. "Tue, 14 Oct – Sat, 18 Oct" for an order placed now. */
+    deliveryEstimate: string;
 };
 
+type PlacedOrder = { orderId: string; accessToken?: string };
+
+type PinLookup =
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "found"; city: string; state: string }
+    | { status: "missing"; message: string };
+
 const NEW_ADDRESS = "new";
+
+// One key per visit to this page: lets the server spot a resubmitted guest order.
+function newCheckoutKey() {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+    return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+}
 
 // ₹1,804.50 rather than ₹1,804.5 when there are paise.
 const rupees = (value: number) =>
@@ -58,15 +77,23 @@ async function postJson<T>(url: string, body: unknown) {
         : ({ ok: false, error: data as ApiError } as const);
 }
 
-export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) {
+export default function CheckoutForm({ contact, addresses, deliveryEstimate }: CheckoutFormProps) {
     const router = useRouter();
-    const { items: cartItems, loading: cartLoading, refresh: refreshCart } = useCart();
+    const {
+        items: cartItems,
+        loading: cartLoading,
+        refresh: refreshCart,
+        clearCart,
+        delivery: deliveryRules,
+    } = useCart();
     const { pay } = useRazorpayPayment();
+    const isGuest = contact === null;
+    const [checkoutKey] = useState(newCheckoutKey);
 
     // Customer information
-    const [name, setName] = useState(contact.name);
-    const [phone, setPhone] = useState(contact.phone);
-    const [email, setEmail] = useState(contact.email);
+    const [name, setName] = useState(contact?.name ?? "");
+    const [phone, setPhone] = useState(contact?.phone ?? "");
+    const [email, setEmail] = useState(contact?.email ?? "");
 
     // Delivery information
     const defaultAddress = addresses[0];
@@ -76,6 +103,10 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
     const [state, setState] = useState(defaultAddress?.state ?? "");
     const [pin, setPin] = useState(defaultAddress?.pin ?? "");
     const [saveAddress, setSaveAddress] = useState(addresses.length === 0);
+
+    // City and state filled in from the PIN code; typing over them wins.
+    const [pinLookup, setPinLookup] = useState<PinLookup>({ status: "idle" });
+    const autoFilled = useRef({ city: "", state: "" });
 
     // Coupon
     const [couponInput, setCouponInput] = useState("");
@@ -90,12 +121,23 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
     const [paymentChoice, setPaymentChoice] = useState<PaymentMethod | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [placing, setPlacing] = useState(false);
+    // Set once the order exists, so emptying the cart doesn't flash "empty cart".
+    const [placed, setPlaced] = useState(false);
 
     // Re-quote whenever the cart contents change (e.g. edited in another tab).
     const cartKey = cartItems.map((item) => `${item.slug}:${item.quantity}`).join(",");
 
+    // Guests' carts live in the browser, so send them along; signed-in
+    // customers' carts are read on the server.
+    const guestItems = useCallback(
+        () => (isGuest ? cartItems.map(({ slug, quantity }) => ({ slug, quantity })) : undefined),
+        // cartKey captures every change that matters here.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [isGuest, cartKey]
+    );
+
     const loadQuote = useCallback(async (couponCode?: string) => {
-        const result = await postJson<Quote>("/api/checkout/quote", { couponCode });
+        const result = await postJson<Quote>("/api/checkout/quote", { couponCode, items: guestItems() });
         if (result.ok) {
             setQuote(result.data);
             setQuoteError(null);
@@ -104,10 +146,10 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
             setQuoteError(result.error);
         }
         return result;
-    }, []);
+    }, [guestItems]);
 
     useEffect(() => {
-        if (cartLoading) return;
+        if (cartLoading || placed) return;
         loadQuote(appliedCoupon).then((result) => {
             // A previously applied coupon can stop qualifying if the cart shrinks.
             if (!result.ok && result.error.code === "COUPON") {
@@ -116,7 +158,46 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
                 loadQuote(undefined);
             }
         });
-    }, [cartKey, cartLoading, appliedCoupon, loadQuote]);
+    }, [cartKey, cartLoading, appliedCoupon, loadQuote, placed]);
+
+    // Look up city and state once a full PIN code is entered.
+    useEffect(() => {
+        if (addressChoice !== NEW_ADDRESS || !/^[1-9]\d{5}$/.test(pin)) {
+            setPinLookup({ status: "idle" });
+            return;
+        }
+
+        let cancelled = false;
+        setPinLookup({ status: "loading" });
+        fetch(`/api/pincode/${pin}`)
+            .then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                if (cancelled) return;
+                if (!response.ok) {
+                    setPinLookup({
+                        status: "missing",
+                        message: data.error ?? "Please fill in your city and state.",
+                    });
+                    return;
+                }
+                setPinLookup({ status: "found", city: data.city, state: data.state });
+                // Only replace what is empty or was filled in from an earlier PIN.
+                setCity((current) =>
+                    !current.trim() || current === autoFilled.current.city ? data.city : current
+                );
+                setState((current) =>
+                    !current || current === autoFilled.current.state ? data.state : current
+                );
+                autoFilled.current = { city: data.city, state: data.state };
+            })
+            .catch(() => {
+                if (!cancelled) setPinLookup({ status: "idle" });
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [pin, addressChoice]);
 
     function chooseAddress(id: string) {
         setAddressChoice(id);
@@ -142,7 +223,7 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
 
         setApplyingCoupon(true);
         setCouponError(null);
-        const result = await postJson<Quote>("/api/checkout/quote", { couponCode: code });
+        const result = await postJson<Quote>("/api/checkout/quote", { couponCode: code, items: guestItems() });
         setApplyingCoupon(false);
 
         if (result.ok) {
@@ -187,33 +268,43 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
         setPlacing(true);
         setFormError(null);
 
-        const result = await postJson<{ orderId: string }>("/api/checkout", {
+        const result = await postJson<PlacedOrder>("/api/checkout", {
             shipping: { name, phone, email, address, city, state, pin },
             couponCode: appliedCoupon,
             expectedTotal: quote.total,
-            saveAddress: addressChoice === NEW_ADDRESS && saveAddress,
+            saveAddress: !isGuest && addressChoice === NEW_ADDRESS && saveAddress,
             paymentMethod,
+            items: guestItems(),
+            checkoutKey: isGuest ? checkoutKey : undefined,
         });
 
-        if (result.ok && paymentMethod === "COD") {
-            await refreshCart();
-            router.push(`/order-success?orderId=${encodeURIComponent(result.data.orderId)}`);
-            return;
-        }
-
         if (result.ok) {
-            // The order now exists with stock reserved; collect payment. The
-            // server already emptied the cart, but we only sync that after the
-            // payment window closes so this page doesn't re-render underneath it.
-            const orderId = encodeURIComponent(result.data.orderId);
-            const outcome = await pay(result.data.orderId);
-            await refreshCart();
+            const { orderId, accessToken } = result.data;
+            // Guests have no account: keep the order's link on this device.
+            if (accessToken) rememberDeviceOrder(orderId, accessToken);
+
+            // The server already emptied a signed-in customer's cart; a guest's
+            // lives in this browser. Either way, only sync it once we're
+            // leaving this page (after the payment window, for online orders).
+            const syncCart = () => {
+                setPlaced(true);
+                return accessToken ? clearCart() : refreshCart();
+            };
+
+            if (paymentMethod === "COD") {
+                await syncCart();
+                router.push(orderSuccessPath(orderId, accessToken));
+                return;
+            }
+
+            // The order now exists with stock reserved; collect payment.
+            const outcome = await pay(orderId, accessToken);
+            await syncCart();
 
             if (outcome.status === "paid") {
-                router.push(`/order-success?orderId=${orderId}`);
+                router.push(orderSuccessPath(orderId, accessToken));
             } else {
-                const reason = outcome.status === "error" ? "failed" : "pending";
-                router.push(`/order-success?orderId=${orderId}&payment=${reason}`);
+                router.push(orderSuccessPath(orderId, accessToken, outcome.status === "error" ? "failed" : "pending"));
             }
             return;
         }
@@ -229,6 +320,17 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
             await refreshCart();
             await loadQuote(appliedCoupon);
         }
+    }
+
+    if (placed) {
+        return (
+            <main className="checkout-page">
+                <div className="checkout-container checkout-empty">
+                    <p className="section-label">CHECKOUT</p>
+                    <p>Opening your order…</p>
+                </div>
+            </main>
+        );
     }
 
     if (cartLoading || (!quote && !quoteError)) {
@@ -308,11 +410,23 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
                     </h1>
                 </div>
 
+                <CheckoutSteps current="Address" />
+
                 <div className="checkout-layout">
 
                     {/* FORM */}
 
                     <form className="checkout-form" onSubmit={handlePlaceOrder} noValidate>
+
+                        {isGuest && (
+                            <div className="guest-banner">
+                                <p>
+                                    <strong>Checking out as a guest.</strong> No account needed: we&apos;ll
+                                    email your order link so you can track it.
+                                </p>
+                                <Link href="/login?callbackUrl=/checkout">Log in instead</Link>
+                            </div>
+                        )}
 
                         {/* CONTACT INFORMATION */}
 
@@ -423,6 +537,36 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
                                         </div>
 
                                         <div className="form-field">
+                                            <label htmlFor="co-pin">PIN CODE *</label>
+                                            <input
+                                                id="co-pin"
+                                                type="text"
+                                                inputMode="numeric"
+                                                autoComplete="postal-code"
+                                                maxLength={6}
+                                                placeholder="201301"
+                                                aria-describedby="co-pin-hint"
+                                                value={pin}
+                                                onChange={(e) =>
+                                                    setPin(e.target.value.replace(/\D/g, ""))
+                                                }
+                                            />
+                                            <p
+                                                id="co-pin-hint"
+                                                className={`pin-hint${pinLookup.status === "found" ? " found" : ""}`}
+                                                aria-live="polite"
+                                            >
+                                                {pinLookup.status === "loading"
+                                                    ? "Finding your city…"
+                                                    : pinLookup.status === "found"
+                                                      ? `Delivering to ${pinLookup.city}, ${pinLookup.state}`
+                                                      : pinLookup.status === "missing"
+                                                        ? pinLookup.message
+                                                        : "City and state fill in from your PIN code."}
+                                            </p>
+                                        </div>
+
+                                        <div className="form-field">
                                             <label htmlFor="co-city">CITY *</label>
                                             <input
                                                 id="co-city"
@@ -452,32 +596,18 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
                                             </select>
                                         </div>
 
-                                        <div className="form-field">
-                                            <label htmlFor="co-pin">PIN CODE *</label>
-                                            <input
-                                                id="co-pin"
-                                                type="text"
-                                                inputMode="numeric"
-                                                autoComplete="postal-code"
-                                                maxLength={6}
-                                                placeholder="201301"
-                                                value={pin}
-                                                onChange={(e) =>
-                                                    setPin(e.target.value.replace(/\D/g, ""))
-                                                }
-                                            />
-                                        </div>
-
                                     </div>
 
-                                    <label className="checkbox-field">
-                                        <input
-                                            type="checkbox"
-                                            checked={saveAddress}
-                                            onChange={(e) => setSaveAddress(e.target.checked)}
-                                        />
-                                        <span>Save this address to my account</span>
-                                    </label>
+                                    {!isGuest && (
+                                        <label className="checkbox-field">
+                                            <input
+                                                type="checkbox"
+                                                checked={saveAddress}
+                                                onChange={(e) => setSaveAddress(e.target.checked)}
+                                            />
+                                            <span>Save this address to my account</span>
+                                        </label>
+                                    )}
                                 </>
                             )}
 
@@ -574,9 +704,16 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
                                         <strong>Pay Online</strong>
                                         <p>
                                             {quote.onlinePaymentAvailable
-                                                ? "UPI, Debit Card, Credit Card & Net Banking"
+                                                ? "Secure payment by Razorpay"
                                                 : "Temporarily unavailable"}
                                         </p>
+                                        {quote.onlinePaymentAvailable && (
+                                            <div className="payment-badges" aria-label="Accepted methods">
+                                                <span>UPI</span>
+                                                <span>CARDS</span>
+                                                <span>NET BANKING</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </label>
 
@@ -666,11 +803,25 @@ export default function CheckoutForm({ contact, addresses }: CheckoutFormProps) 
                             <strong>{quote.delivery === 0 ? "FREE" : rupees(quote.delivery)}</strong>
                         </div>
 
+                        {quote.delivery > 0 && quote.subtotal < deliveryRules.freeDeliveryThreshold && (
+                            <p className="free-delivery-hint">
+                                Add {rupees(deliveryRules.freeDeliveryThreshold - quote.subtotal)} more for free
+                                delivery.
+                            </p>
+                        )}
+
                         <div className="summary-line" />
 
                         <div className="summary-total">
                             <span>Total</span>
                             <strong>{rupees(quote.total)}</strong>
+                        </div>
+
+                        <div className="delivery-estimate">
+                            <div>
+                                <strong>Expected delivery: {deliveryEstimate}</strong>
+                                <span>Estimated from when your order is confirmed; we&apos;ll email tracking once it ships.</span>
+                            </div>
                         </div>
 
                         <div className="secure-checkout">

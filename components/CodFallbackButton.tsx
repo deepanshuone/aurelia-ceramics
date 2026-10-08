@@ -2,15 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { orderSuccessPath } from "../lib/order-links";
 
 // Shown next to "Pay" on an unpaid online order: confirms it as Cash on
 // Delivery instead, keeping the same items and total.
 export default function CodFallbackButton({
   orderId,
   className = "secondary-btn",
+  accessToken,
 }: {
   orderId: string;
   className?: string;
+  /** Guest orders: the signed link's token. */
+  accessToken?: string;
 }) {
   const router = useRouter();
   const [switching, setSwitching] = useState(false);
@@ -23,13 +27,13 @@ export default function CodFallbackButton({
     const response = await fetch("/api/payments/cod", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId }),
+      body: JSON.stringify({ orderId, token: accessToken }),
       cache: "no-store",
     }).catch(() => null);
     const data = await response?.json().catch(() => ({}));
 
     if (response?.ok) {
-      router.replace(`/order-success?orderId=${encodeURIComponent(orderId)}`);
+      router.replace(orderSuccessPath(orderId, accessToken));
       router.refresh();
       return;
     }

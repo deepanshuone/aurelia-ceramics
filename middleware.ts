@@ -12,7 +12,9 @@ export default auth((req) => {
   // role against the database (lib/admin.ts). The role inside the login token
   // can be up to a minute old, so checking it here would bounce someone who
   // was just given access to the login page.
-  const needsLogin = ["/account", "/admin", "/checkout", "/order-success"].some((prefix) =>
+  // Checkout and the order pages after it also work for guests (see
+  // lib/order-access.ts), so they aren't listed here.
+  const needsLogin = ["/account", "/admin"].some((prefix) =>
     pathname.startsWith(prefix)
   );
 
@@ -24,5 +26,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/account/:path*", "/admin/:path*", "/checkout", "/order-success"],
+  matcher: ["/account/:path*", "/admin/:path*"],
 };

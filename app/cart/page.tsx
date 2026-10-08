@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useCart } from "../../components/CartProvider";
 import CartSuggestions from "../../components/CartSuggestions";
+import CheckoutSteps from "../../components/CheckoutSteps";
 import { POLICY } from "../../lib/business";
 import { CartLine, type DeliveryRules, getCartTotals } from "../../lib/cart";
 
@@ -138,6 +139,8 @@ export default function CartPage() {
                         <em>selection.</em>
                     </h1>
                 </div>
+
+                <CheckoutSteps current="Cart" />
 
                 <ShoppingInfo delivery={deliveryRules} />
 
@@ -299,19 +302,19 @@ export default function CartPage() {
                             <p className="cart-blocked">
                                 Remove out-of-stock items to proceed to checkout.
                             </p>
-                        ) : (
-                            <Link
-                                href={
-                                    status === "authenticated"
-                                        ? "/checkout"
-                                        : "/login?callbackUrl=/checkout"
-                                }
-                                className="checkout-btn"
-                            >
-                                {status === "authenticated"
-                                    ? "Proceed to Checkout →"
-                                    : "Log in to Checkout →"}
+                        ) : status === "authenticated" ? (
+                            <Link href="/checkout" className="checkout-btn">
+                                Proceed to Checkout →
                             </Link>
+                        ) : (
+                            <>
+                                <Link href="/checkout" className="checkout-btn">
+                                    Checkout as Guest →
+                                </Link>
+                                <Link href="/login?callbackUrl=/checkout" className="continue-shopping">
+                                    Have an account? Log in
+                                </Link>
+                            </>
                         )}
 
                         <Link

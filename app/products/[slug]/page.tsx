@@ -311,10 +311,10 @@ export default async function ProductPage({ params }: PageProps) {
                 </p>
               )}
               <p>
-                <strong>{product.returnable ? `${POLICY.returnDays}-day returns` : "Not returnable"}</strong>
+                <strong>{product.returnable ? `${POLICY.returnHours} hr return or replacement` : "Not returnable"}</strong>
                 <span>
                   {product.returnable
-                    ? `Unused items in original packaging can be returned within ${POLICY.returnDays} days of delivery.`
+                    ? `Unused items in original packaging can be returned or replaced within ${POLICY.returnHours} hours of delivery.`
                     : "This item can't be returned for a change of mind. Damage in transit is still covered."}{" "}
                   <Link href="/return-refund-policy">Policy</Link>
                 </span>
@@ -413,7 +413,7 @@ export default async function ProductPage({ params }: PageProps) {
                   </li>
                   <li>
                     {product.returnable
-                      ? `Returnable within ${POLICY.returnDays} days of delivery if unused and in its original packaging.`
+                      ? `Return or replacement within ${POLICY.returnHours} hours of delivery if unused and in its original packaging.`
                       : "Not returnable for a change of mind."}{" "}
                     Anything damaged in transit is replaced free if reported within {POLICY.damageReportHours} hours.
                   </li>

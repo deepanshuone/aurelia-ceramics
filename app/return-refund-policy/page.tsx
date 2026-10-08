@@ -43,7 +43,7 @@ export default function ReturnRefundPolicyPage() {
         <h2>Wrong or defective item</h2>
         <p>
           If you receive the wrong product, or an item with a manufacturing defect (other than the natural variations
-          of hand-finished ceramics), tell us within {POLICY.returnDays} days of delivery and we&apos;ll arrange a free
+          of hand-finished ceramics), tell us within {POLICY.returnHours} hours of delivery and we&apos;ll arrange a free
           pickup and a replacement or refund.
         </p>
       </section>
@@ -51,7 +51,8 @@ export default function ReturnRefundPolicyPage() {
       <section>
         <h2>Change of mind</h2>
         <p>
-          Unused items in their original packaging can be returned within {POLICY.returnDays} days of delivery. Please
+          Unused items in their original packaging can be returned or replaced within {POLICY.returnHours} hours of
+          delivery. Please
           contact us first to arrange the return. Return shipping for change-of-mind returns is paid by the customer, and
           the item must reach us unused and undamaged.
         </p>

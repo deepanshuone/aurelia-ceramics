@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { rememberSearch } from "../lib/recent-searches";
 
 type Current = {
   search: string;
@@ -9,23 +10,31 @@ type Current = {
   minPrice: string;
   maxPrice: string;
   inStock: boolean;
+  colour: string;
+  material: string;
+  rating: string;
   sort: string;
 };
+
+type FacetOption = { value: string; count: number };
 
 type Props = {
   categories: string[];
   current: Current;
+  /** Choices available for the current search/category; a filter with none is hidden. */
+  facets?: { colours: FacetOption[]; materials: FacetOption[]; rated: boolean };
 };
 
 const SORT_LABELS: Record<string, string> = {
   relevance: "Best match",
+  popularity: "Popular",
   newest: "Newest",
   "price-asc": "Price: Low to High",
   "price-desc": "Price: High to Low",
-  popularity: "Popularity",
+  rating: "Best Rated",
 };
 
-export default function ProductFilters({ categories, current }: Props) {
+export default function ProductFilters({ categories, current, facets }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -60,6 +69,7 @@ export default function ProductFilters({ categories, current }: Props) {
 
     const timer = setTimeout(() => {
       updateParams({ search: searchInput || null });
+      if (searchInput.trim()) rememberSearch(searchInput);
     }, 400);
 
     return () => clearTimeout(timer);
@@ -99,6 +109,9 @@ export default function ProductFilters({ categories, current }: Props) {
       current.minPrice ||
       current.maxPrice ||
       current.inStock ||
+      current.colour ||
+      current.material ||
+      current.rating ||
       (current.sort && current.sort !== defaultSort)
   );
 
@@ -167,6 +180,65 @@ export default function ProductFilters({ categories, current }: Props) {
             />
           </div>
         </div>
+
+        {/* Keep a chosen value in the list even if it no longer has matches, so the select shows it. */}
+        {facets && (facets.colours.length > 0 || current.colour) && (
+          <div className="filter-group">
+            <label htmlFor="colour-select">Colour</label>
+            <select
+              id="colour-select"
+              value={current.colour}
+              onChange={(e) => updateParams({ colour: e.target.value || null })}
+            >
+              <option value="">All colours</option>
+              {current.colour && !facets.colours.some((c) => c.value === current.colour) && (
+                <option value={current.colour}>{current.colour} (0)</option>
+              )}
+              {facets.colours.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.value} ({c.count})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {facets && (facets.materials.length > 0 || current.material) && (
+          <div className="filter-group">
+            <label htmlFor="material-select">Material</label>
+            <select
+              id="material-select"
+              value={current.material}
+              onChange={(e) => updateParams({ material: e.target.value || null })}
+            >
+              <option value="">All materials</option>
+              {current.material && !facets.materials.some((m) => m.value === current.material) && (
+                <option value={current.material}>{current.material} (0)</option>
+              )}
+              {facets.materials.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.value} ({m.count})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Ratings come from real customer reviews only, so this appears once some exist. */}
+        {facets && (facets.rated || current.rating) && (
+          <div className="filter-group">
+            <label htmlFor="rating-select">Rating</label>
+            <select
+              id="rating-select"
+              value={current.rating}
+              onChange={(e) => updateParams({ rating: e.target.value || null })}
+            >
+              <option value="">Any rating</option>
+              <option value="4">★ 4 & above</option>
+              <option value="3">★ 3 & above</option>
+            </select>
+          </div>
+        )}
 
         <label className="filter-checkbox">
           <input type="checkbox" checked={current.inStock} onChange={toggleInStock} />

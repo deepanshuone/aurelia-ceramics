@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCart } from "./CartProvider";
+import SearchBox, { SearchIcon } from "./SearchBox";
 
 const NAV_LINKS = [
   { href: "/about", label: "About Us" },
@@ -14,30 +15,6 @@ const NAV_LINKS = [
 type NavCategory = { name: string; count: number };
 
 const categoryHref = (name: string) => `/products?category=${encodeURIComponent(name)}`;
-
-type Suggestion = {
-  name: string;
-  slug: string;
-  price: number;
-  image: string;
-};
-
-function SearchIcon({ dark }: { dark?: boolean }) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={dark ? "currentColor" : "white"}
-      strokeWidth="2"
-      strokeLinecap="round"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  );
-}
 
 function CartIcon() {
   return (
@@ -92,124 +69,6 @@ function UserIcon() {
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
     </svg>
-  );
-}
-
-function SearchBox({
-  value,
-  onChange,
-  onSubmit,
-  placeholder,
-  autoFocus,
-  formClassName,
-  wrapperClassName,
-  dark,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  placeholder: string;
-  autoFocus?: boolean;
-  formClassName: string;
-  wrapperClassName?: string;
-  dark?: boolean;
-}) {
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [meta, setMeta] = useState<{ total: number; corrected: string | null }>({ total: 0, corrected: null });
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const trimmed = value.trim();
-
-    if (trimmed.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    const timer = setTimeout(() => {
-      fetch(`/api/products/suggest?q=${encodeURIComponent(trimmed)}`, {
-        signal: controller.signal,
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setSuggestions(data.suggestions ?? []);
-          setMeta({ total: data.total ?? 0, corrected: data.corrected ?? null });
-          setOpen(true);
-        })
-        .catch(() => {});
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  return (
-    <div className={`search-box${wrapperClassName ? ` ${wrapperClassName}` : ""}`} ref={containerRef}>
-      <form
-        className={formClassName}
-        onSubmit={(e) => {
-          setOpen(false);
-          onSubmit(e);
-        }}
-      >
-        <input
-          type="search"
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => suggestions.length > 0 && setOpen(true)}
-          autoFocus={autoFocus}
-          aria-label="Search products"
-          autoComplete="off"
-        />
-        <button type="submit" aria-label="Search">
-          <SearchIcon dark={dark} />
-        </button>
-      </form>
-
-      {open && suggestions.length > 0 && (
-        <div className="search-suggestions">
-          {meta.corrected && <p className="search-suggestions-note">Showing results for &ldquo;{meta.corrected}&rdquo;</p>}
-          {suggestions.map((s) => (
-            <Link
-              key={s.slug}
-              href={`/products/${s.slug}`}
-              className="search-suggestion"
-              onClick={() => setOpen(false)}
-            >
-              <img src={s.image} alt={s.name} />
-              <span>{s.name}</span>
-              <strong>₹{s.price.toLocaleString("en-IN")}</strong>
-            </Link>
-          ))}
-          {meta.total > suggestions.length && (
-            <Link
-              href={`/products?search=${encodeURIComponent(value.trim())}`}
-              className="search-suggestions-footer"
-              onClick={() => setOpen(false)}
-            >
-              View all {meta.total} results →
-            </Link>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -285,6 +144,7 @@ export default function Header({ categories = [] }: { categories?: NavCategory[]
           onSubmit={submitSearch}
           placeholder="Search ceramic mugs, plates, bowls..."
           formClassName="site-search"
+          popular={categories}
         />
 
         <div className="site-header-actions">
@@ -332,6 +192,7 @@ export default function Header({ categories = [] }: { categories?: NavCategory[]
             placeholder="Search products..."
             formClassName=""
             wrapperClassName="search-box-mobile"
+            popular={categories}
             autoFocus
             dark
           />

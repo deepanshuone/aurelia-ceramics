@@ -10,6 +10,7 @@ import { getDeliveryRules } from "../lib/store-settings";
 import { isOnlinePaymentConfigured } from "../lib/payments";
 import HomeProductCard from "../components/home/HomeProductCard";
 import TrustStrip from "../components/home/TrustStrip";
+import HeroCup from "../components/home/HeroCup";
 import "./home.css";
 
 const HERO_IMAGE = "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1600&q=70";
@@ -96,7 +97,7 @@ export default async function Home() {
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
       {/* HERO */}
-      <section className="hero">
+      <section className="hero has-cup">
         <Image src={HERO_IMAGE} alt="" fill priority sizes="100vw" quality={70} className="hero-bg" />
         <div className="hero-overlay" />
 
@@ -124,6 +125,8 @@ export default async function Home() {
             </Link>
           </div>
         </div>
+
+        <HeroCup />
 
         <div className="hero-scroll">
           <span />

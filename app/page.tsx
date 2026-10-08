@@ -4,6 +4,12 @@ import SmartImage from "../components/SmartImage";
 import { prisma } from "../lib/prisma";
 import { formatRupees } from "../lib/order-display";
 import { SITE_DESCRIPTION, SITE_NAME, getSiteUrl, jsonLd } from "../lib/site";
+import { getBestSellers, getCatalogueStats, getNewArrivals } from "../lib/home";
+import { getDeliveryRules } from "../lib/store-settings";
+import { isOnlinePaymentConfigured } from "../lib/payments";
+import HomeProductCard from "../components/home/HomeProductCard";
+import TrustStrip from "../components/home/TrustStrip";
+import "./home.css";
 
 const HERO_IMAGE = "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1600&q=70";
 const B2B_IMAGE = "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=2200&q=85";
@@ -13,9 +19,13 @@ const B2B_IMAGE = "https://images.unsplash.com/photo-1544148103-0773bf10d330?aut
 export const revalidate = 600;
 
 const FEATURED_LIMIT = 8;
+const BEST_SELLER_LIMIT = 8;
+const NEW_ARRIVAL_LIMIT = 4;
+// Below this many real sellers the section is titled as picks, not best sellers.
+const MIN_REAL_BEST_SELLERS = 4;
 
 async function getHomeData() {
-  const [categories, featured] = await Promise.all([
+  const [categories, featured, newArrivals, stats, delivery] = await Promise.all([
     prisma.category.findMany({
       where: { isActive: true, products: { some: { isActive: true } } },
       orderBy: { name: "asc" },
@@ -39,12 +49,26 @@ async function getHomeData() {
         images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
       },
     }),
+    getNewArrivals(NEW_ARRIVAL_LIMIT),
+    getCatalogueStats(),
+    getDeliveryRules(),
   ]);
-  return { categories, featured };
+  // Fill-in picks skip what the featured and new-arrival rows already show.
+  const bestSellers = await getBestSellers(BEST_SELLER_LIMIT, [
+    ...featured.map((product) => product.slug),
+    ...newArrivals.map((product) => product.slug),
+  ]);
+  return { categories, featured, newArrivals, bestSellers, stats, delivery };
 }
 
 export default async function Home() {
-  const { categories, featured } = await getHomeData();
+  const { categories, featured, newArrivals, bestSellers, stats, delivery } = await getHomeData();
+  const realBestSellers = bestSellers.soldCount >= MIN_REAL_BEST_SELLERS;
+  // Only real sellers carry the "Best Sellers" title; until then the row is our picks.
+  const bestSellerProducts = realBestSellers
+    ? // Whole rows of four, so the grid never ends on a lone card.
+      bestSellers.products.slice(0, bestSellers.soldCount - (bestSellers.soldCount % 4))
+    : bestSellers.products;
   const site = getSiteUrl();
   const structuredData = [
     {
@@ -106,7 +130,9 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* INTRO */}
+      <TrustStrip delivery={delivery} onlinePayments={isOnlinePaymentConfigured()} />
+
+      {/* BRAND STORY */}
       <section className="intro section">
         <div className="container intro-grid">
           <div>
@@ -119,21 +145,51 @@ export default async function Home() {
           </div>
 
           <div className="intro-text">
-            <p>
-              At Aurelia Ceramics, we believe crockery is more than something
-              you eat from. It is part of the experience — the first thing
-              guests notice and the final detail that completes a table.
+            <p className="intro-lead">
+              Crockery is the first thing guests notice and the last detail that
+              completes a table. We think it deserves the same care as the food
+              served on it.
             </p>
 
             <p>
-              We combine timeless design, dependable ceramic quality and
-              practical functionality to create tableware made for modern
-              living and professional hospitality.
+              Aurelia brings together Indian ceramic craft and contemporary
+              design. We obsess over proportion, glaze and edge profiles, the
+              small details that make a plate feel right in the hand, and we
+              choose pieces that hold up to daily use at home and in busy
+              hospitality kitchens alike.
             </p>
 
             <Link href="/about" className="text-link">
-              Discover our story <span>→</span>
+              Read our story <span>→</span>
             </Link>
+          </div>
+        </div>
+
+        <div className="container story-pillars">
+          <div className="story-pillar">
+            <span>01</span>
+            <h3>Considered design</h3>
+            <p>Clean, useful forms with the proportion and finish to look good on any table, for years.</p>
+          </div>
+          <div className="story-pillar">
+            <span>02</span>
+            <h3>Craft in every piece</h3>
+            <p>From matte glazes to hand-painted Khurja pottery, where every brushstroke makes a piece its own.</p>
+          </div>
+          <div className="story-pillar">
+            <span>03</span>
+            <h3>Made to be used</h3>
+            <p>Tableware for everyday meals, festive spreads and professional kitchens, not just the display cabinet.</p>
+          </div>
+          <div className="story-stats" aria-label="Our catalogue">
+            <div>
+              <strong>{stats.products}</strong>
+              <span>designs</span>
+            </div>
+            <div>
+              <strong>{stats.collections}</strong>
+              <span>collections</span>
+            </div>
           </div>
         </div>
       </section>
@@ -177,6 +233,40 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* BEST SELLERS */}
+      {bestSellerProducts.length > 0 && (
+        <section className="home-products section">
+          <div className="container">
+            <div className="section-heading">
+              <div>
+                <p className="section-label">{realBestSellers ? "BEST SELLERS" : "OUR PICKS"}</p>
+                <h2>
+                  {realBestSellers ? (
+                    <>
+                      What our customers <em>love</em>
+                    </>
+                  ) : (
+                    <>
+                      Pieces worth a <em>closer look</em>
+                    </>
+                  )}
+                </h2>
+              </div>
+
+              <Link href="/products?sort=popularity" className="text-link">
+                Shop all {realBestSellers ? "best sellers" : "products"} <span>→</span>
+              </Link>
+            </div>
+
+            <div className="home-card-grid">
+              {bestSellerProducts.map((product) => (
+                <HomeProductCard product={product} key={product.slug} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* FEATURED PRODUCTS */}
       <section className="featured section">
         <div className="container">
@@ -219,6 +309,32 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* NEW ARRIVALS */}
+      {newArrivals.length > 0 && (
+        <section className="new-arrivals section">
+          <div className="container new-arrivals-grid">
+            <div className="new-arrivals-intro">
+              <p className="section-label">JUST IN</p>
+              <h2>
+                New
+                <br />
+                <em>Arrivals</em>
+              </h2>
+              <p>Fresh pieces, just added to the collection.</p>
+              <Link href="/products?sort=newest" className="primary-btn dark-btn">
+                Shop New Arrivals <span>→</span>
+              </Link>
+            </div>
+
+            <div className="home-card-grid new-arrivals-cards">
+              {newArrivals.map((product) => (
+                <HomeProductCard product={product} badge="New" key={product.slug} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* WHY US */}
       <section className="why section">

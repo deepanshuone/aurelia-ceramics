@@ -5,6 +5,7 @@ import { getCustomerCart, resolveGuestCart, type CartRequestItem } from "./cart-
 import type { CartLine } from "./cart";
 import { expireStaleOrders, isOnlinePaymentConfigured } from "./payments";
 import { readDeliveryRules } from "./store-settings";
+import { gstPaise } from "./pricing";
 
 export const shippingSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(100),
@@ -68,6 +69,8 @@ export type Quote = {
   subtotal: number;
   discount: number;
   delivery: number;
+  /** GST on the goods after any coupon (delivery is not taxed). See lib/pricing.ts. */
+  gst: number;
   total: number;
   coupon: { id: string; code: string; description: string | null } | null;
 };
@@ -155,12 +158,16 @@ export async function quoteCheckout(buyer: Buyer, couponCode?: string): Promise<
     throw new CheckoutError("The order total is too low to process.", 400, "CART_CHANGED");
   }
 
+  // GST is charged on what the customer pays for the goods: selling price less any coupon.
+  const gst = gstPaise(subtotal - Math.min(discount, subtotal));
+
   return {
     items: cart.items,
     subtotal: toRupees(subtotal),
     discount: toRupees(discount),
     delivery: toRupees(delivery),
-    total: toRupees(subtotal - discount + delivery),
+    gst: toRupees(gst),
+    total: toRupees(subtotal - discount + delivery + gst),
     coupon: applied
       ? { id: applied.coupon.id, code: applied.coupon.code, description: applied.coupon.description }
       : null,
@@ -326,6 +333,7 @@ async function createOrder(
           subtotal: quote.subtotal,
           discount: quote.discount,
           delivery: quote.delivery,
+          gst: quote.gst,
           total: quote.total,
           couponId: quote.coupon?.id,
           shippingName: shipping.name,

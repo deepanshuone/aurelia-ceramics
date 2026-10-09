@@ -234,6 +234,8 @@ model Order {
   subtotal        Decimal     @db.Decimal(10, 2)
   discount        Decimal     @db.Decimal(10, 2) @default(0)
   delivery        Decimal     @db.Decimal(10, 2)
+  // GST included in total (rate in lib/pricing.ts). 0 on orders placed before GST was added.
+  gst             Decimal     @db.Decimal(10, 2) @default(0)
   total           Decimal     @db.Decimal(10, 2)
 
   couponId        String?

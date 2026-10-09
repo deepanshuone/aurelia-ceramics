@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       subtotal: quote.subtotal,
       discount: quote.discount,
       delivery: quote.delivery,
+      gst: quote.gst,
       total: quote.total,
       coupon: quote.coupon && { code: quote.coupon.code, description: quote.coupon.description },
       onlinePaymentAvailable: isOnlinePaymentConfigured(),

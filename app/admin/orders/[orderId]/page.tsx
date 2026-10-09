@@ -110,6 +110,12 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ ord
                       <td className="num">−{formatRupees(order.discount)}</td>
                     </tr>
                   )}
+                  {Number(order.gst) > 0 && (
+                    <tr>
+                      <td colSpan={3}>GST</td>
+                      <td className="num">{formatRupees(order.gst)}</td>
+                    </tr>
+                  )}
                   <tr>
                     <td colSpan={3}>Delivery</td>
                     <td className="num">{Number(order.delivery) === 0 ? "Free" : formatRupees(order.delivery)}</td>

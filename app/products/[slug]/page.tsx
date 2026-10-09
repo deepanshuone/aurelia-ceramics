@@ -268,7 +268,7 @@ export default async function ProductPage({ params }: PageProps) {
               <p className="pdp-savings">You save ₹{savingsPerUnit({ price, mrp }).toLocaleString("en-IN")}</p>
             )}
 
-            <p className="tax-note">Inclusive of applicable taxes</p>
+            <p className="tax-note">GST added at checkout</p>
 
             {safeFlags.length > 0 && (
               <ul className="pdp-badges" aria-label="Safe for">

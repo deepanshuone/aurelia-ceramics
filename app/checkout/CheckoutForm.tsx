@@ -24,6 +24,7 @@ type Quote = {
     subtotal: number;
     discount: number;
     delivery: number;
+    gst: number;
     total: number;
     coupon: { code: string; description: string | null } | null;
     onlinePaymentAvailable: boolean;
@@ -797,6 +798,11 @@ export default function CheckoutForm({ contact, addresses, deliveryEstimate }: C
                                 <strong>−{rupees(quote.discount)}</strong>
                             </div>
                         )}
+
+                        <div className="summary-row">
+                            <span>GST</span>
+                            <strong>{rupees(quote.gst)}</strong>
+                        </div>
 
                         <div className="summary-row">
                             <span>Delivery</span>

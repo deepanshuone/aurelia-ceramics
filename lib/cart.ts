@@ -24,6 +24,8 @@ export type GuestCartItem = {
   quantity: number;
 };
 
+import { gstOn } from "./pricing";
+
 const CART_KEY = "aurelia-cart";
 
 /** Delivery pricing in rupees. Admins edit it under Admin → Settings. */
@@ -46,7 +48,8 @@ export function getCartTotals(items: CartLine[], rules: DeliveryRules) {
     .filter((item) => item.available)
     .reduce((total, item) => total + item.price * item.quantity, 0);
   const delivery = deliveryCharge(subtotal, rules);
-  return { subtotal, delivery, total: subtotal + delivery };
+  const gst = gstOn(subtotal);
+  return { subtotal, delivery, gst, total: Math.round((subtotal + delivery + gst) * 100) / 100 };
 }
 
 export function readGuestCart(): GuestCartItem[] {

@@ -13,3 +13,17 @@ export function savingsPerUnit({ price, mrp }: { price: number; mrp: number | nu
   if (!mrp || mrp <= price) return 0;
   return Math.round((mrp - price) * 100) / 100;
 }
+
+// GST added on top of the selling price at checkout. Customers see it as a
+// "GST" line with the rupee amount only. Change the rate here.
+export const GST_PERCENT = 5;
+
+/** GST in paise on a taxable amount in paise (rounded to the nearest paisa). */
+export function gstPaise(taxablePaise: number) {
+  return Math.round((Math.max(0, taxablePaise) * GST_PERCENT) / 100);
+}
+
+/** GST in rupees on a taxable amount in rupees. Same rounding as checkout. */
+export function gstOn(taxable: number) {
+  return gstPaise(Math.round(taxable * 100)) / 100;
+}

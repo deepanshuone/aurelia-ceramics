@@ -1,6 +1,6 @@
 // Canonical site details used for metadata, sitemap, robots and structured data.
 
-export const SITE_NAME = "AURELIA Ceramics";
+export const SITE_NAME = "A.V CERAMIC ENTERPRISES";
 
 export const SITE_DESCRIPTION =
   "Premium ceramic crockery for homes, hospitality and modern dining — dinner sets, plates, bowls, mugs, tea sets, jars, planters and hand-painted Khurja pottery.";

@@ -107,7 +107,7 @@ export function useRazorpayPayment() {
           order_id: params.razorpayOrderId,
           amount: params.amount,
           currency: params.currency,
-          name: "Aurelia Ceramics",
+          name: "A.V CERAMIC ENTERPRISES",
           description: `Order ${params.orderId}`,
           prefill: params.prefill,
           theme: { color: "#171614" },

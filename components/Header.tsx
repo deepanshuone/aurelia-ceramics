@@ -98,10 +98,10 @@ export default function Header({ categories = [] }: { categories?: NavCategory[]
     <header className="site-header">
       <div className="container site-header-inner">
         <Link href="/" className="logo" onClick={() => setMenuOpen(false)}>
-          <span className="logo-mark">A</span>
+          <span className="logo-mark">AV</span>
           <span>
-            <strong>AURELIA</strong>
-            <small>CERAMICS</small>
+            <strong>A.V CERAMIC</strong>
+            <small>ENTERPRISES</small>
           </span>
         </Link>
 

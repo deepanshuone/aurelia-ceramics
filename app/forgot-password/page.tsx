@@ -4,7 +4,7 @@ import ForgotPasswordForm from "./ForgotPasswordForm";
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
   title: "Forgot Password",
-  description: "Reset your Aurelia Ceramics account password.",
+  description: "Reset your A.V Ceramic Enterprises account password.",
 };
 
 export default function ForgotPasswordPage() {

@@ -156,7 +156,7 @@ export default async function Home() {
             </p>
 
             <p>
-              Aurelia brings together Indian ceramic craft and contemporary
+              A.V Ceramic Enterprises brings together Indian ceramic craft and contemporary
               design. We obsess over proportion, glaze and edge profiles, the
               small details that make a plate feel right in the hand, and we
               choose pieces that hold up to daily use at home and in busy
@@ -351,7 +351,7 @@ export default async function Home() {
       <section className="why section">
         <div className="container">
           <div className="why-heading">
-            <p className="section-label">WHY AURELIA</p>
+            <p className="section-label">WHY A.V CERAMIC</p>
             <h2>
               Quality you can see.
               <br />

@@ -6,7 +6,7 @@ import TrackOrderForm from "./TrackOrderForm";
 
 export const metadata: Metadata = {
   title: "Track Order",
-  description: "Check the status and delivery date of your Aurelia Ceramics order.",
+  description: "Check the status and delivery date of your A.V Ceramic Enterprises order.",
 };
 
 export default async function TrackOrderPage() {

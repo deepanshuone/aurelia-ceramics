@@ -42,7 +42,7 @@ Without the Razorpay keys the shop still works — checkout offers **Cash on Del
 | `SMTP_HOST` / `SMTP_PORT` | `smtp.gmail.com` / `465` |
 | `SMTP_USER` | your Gmail address |
 | `SMTP_PASS` | a Google **App Password** (myaccount.google.com/apppasswords) |
-| `EMAIL_FROM` | optional, e.g. `Aurelia Ceramics <yourshop@gmail.com>` |
+| `EMAIL_FROM` | optional, e.g. `A.V Ceramic Enterprises <yourshop@gmail.com>` |
 | `ORDER_ALERT_EMAIL` | where new-order alerts go |
 
 or `RESEND_API_KEY` (Resend needs a verified domain). Without either, orders still work — emails are just skipped.

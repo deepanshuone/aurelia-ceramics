@@ -5,7 +5,7 @@ import '../home.css';
 
 export const metadata: Metadata = {
   title: 'About Us',
-  description: 'Aurelia Ceramics combines Indian ceramic craftsmanship with contemporary design to create tableware for homes and hospitality.',
+  description: 'A.V Ceramic Enterprises combines Indian ceramic craftsmanship with contemporary design to create tableware for homes and hospitality.',
 };
 
 export const revalidate = 600;

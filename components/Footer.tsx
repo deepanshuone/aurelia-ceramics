@@ -11,10 +11,10 @@ export default async function Footer() {
       <div className="container footer-grid">
         <div>
           <Link href="/" className="logo footer-logo">
-            <span className="logo-mark">A</span>
+            <span className="logo-mark">AV</span>
             <span>
-              <strong>AURELIA</strong>
-              <small>CERAMICS</small>
+              <strong>A.V CERAMIC</strong>
+              <small>ENTERPRISES</small>
             </span>
           </Link>
 

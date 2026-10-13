@@ -11,7 +11,7 @@ import { BUSINESS } from "./business";
  *  Resend (needs a verified sending domain to email customers):
  *    RESEND_API_KEY=re_...
  *
- *  EMAIL_FROM sets the sender, e.g. "Aurelia Ceramics <orders@yourdomain.in>".
+ *  EMAIL_FROM sets the sender, e.g. "A.V Ceramic Enterprises <orders@yourdomain.in>".
  *
  * With neither configured, emails are only logged — orders never fail
  * because an email could not be sent.

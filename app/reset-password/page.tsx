@@ -6,7 +6,7 @@ import ResetPasswordForm from "./ResetPasswordForm";
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
   title: "Choose a New Password",
-  description: "Choose a new password for your Aurelia Ceramics account.",
+  description: "Choose a new password for your A.V Ceramic Enterprises account.",
 };
 
 type PageProps = { searchParams: Promise<{ token?: string | string[] }> };

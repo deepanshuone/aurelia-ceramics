@@ -589,7 +589,7 @@ img {
   display: grid;
   place-items: center;
   font-family: var(--font-playfair), "Playfair Display", serif;
-  font-size: 20px;
+  font-size: 16px;
 }
 
 .logo span:last-child {

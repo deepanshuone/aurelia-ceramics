@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma";
 import PayNowButton from "../../components/PayNowButton";
 import CodFallbackButton from "../../components/CodFallbackButton";
 import CheckoutSteps from "../../components/CheckoutSteps";
+import TrackPurchase from "../../components/TrackPurchase";
 import { estimateDelivery, formatDeliveryEstimate } from "../../lib/delivery-estimate";
 import { orderAccessWhere } from "../../lib/order-access";
 import { orderDetailPath } from "../../lib/order-links";
@@ -50,6 +51,7 @@ export default async function OrderSuccessPage({
           cancelReason: true,
           confirmedAt: true,
           processingDays: true,
+          items: { select: { productId: true, name: true, price: true, quantity: true } },
         },
       })
     : null;
@@ -105,6 +107,19 @@ export default async function OrderSuccessPage({
     </div>
   );
 
+  const trackPurchase = (
+    <TrackPurchase
+      orderId={order.orderId}
+      total={Number(order.total)}
+      items={order.items.map((item) => ({
+        id: item.productId ?? item.name,
+        name: item.name,
+        price: Number(item.price),
+        quantity: item.quantity,
+      }))}
+    />
+  );
+
   const confirmedEstimate = async () =>
     formatDeliveryEstimate(
       estimateDelivery(order.processingDays ?? (await getStoreProcessingDays()), order.confirmedAt ?? order.createdAt)
@@ -115,6 +130,7 @@ export default async function OrderSuccessPage({
     return (
       <main className="order-success-page">
         <div className="success-card">
+          {trackPurchase}
           <CheckoutSteps current="Confirmed" />
           <div className="success-icon">✓</div>
 
@@ -153,6 +169,7 @@ export default async function OrderSuccessPage({
     return (
       <main className="order-success-page">
         <div className="success-card">
+          {trackPurchase}
           <CheckoutSteps current="Confirmed" />
           <div className="success-icon">✓</div>
 

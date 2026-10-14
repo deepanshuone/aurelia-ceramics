@@ -9,6 +9,7 @@ import type { CartLine } from "../../lib/cart";
 import { INDIAN_STATES } from "../../lib/indian-states";
 import { orderSuccessPath, rememberDeviceOrder } from "../../lib/order-links";
 import { useRazorpayPayment } from "../../components/useRazorpayPayment";
+import { trackBeginCheckout } from "../../lib/analytics";
 
 type SavedAddress = {
     id: string;
@@ -159,6 +160,18 @@ export default function CheckoutForm({ contact, addresses, deliveryEstimate }: C
             }
         });
     }, [cartKey, cartLoading, appliedCoupon, loadQuote, placed]);
+
+    // Tell the ad platforms once per visit, when the first totals arrive.
+    const checkoutTracked = useRef(false);
+    useEffect(() => {
+        if (!quote || checkoutTracked.current) return;
+        checkoutTracked.current = true;
+        trackBeginCheckout(
+            quote.items
+                .filter((item) => item.available)
+                .map((item) => ({ id: item.productId, name: item.name, price: item.price, quantity: item.quantity }))
+        );
+    }, [quote]);
 
     // Look up city and state once a full PIN code is entered.
     useEffect(() => {

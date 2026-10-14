@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import Providers from '../components/Providers';
 import AnnouncementBar from '../components/AnnouncementBar';
 import WhatsAppFloat from '../components/WhatsAppFloat';
+import AdTracking from '../components/AdTracking';
 import { whatsappLink } from '../lib/business';
 import { getNavCategories } from '../lib/nav';
 import { getDeliveryRules } from '../lib/store-settings';
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <Footer />
           <WhatsAppFloat href={whatsappLink('Hello, I have a question about your ceramic products.')} />
         </Providers>
+        <AdTracking />
       </body>
     </html>
   );

@@ -1,17 +1,18 @@
-// Brand mark: a ceramic vase holding an "AV" monogram (thick/thin strokes,
-// small serifs). Draws in currentColor so it works on light and dark backgrounds.
+// Brand mark: a ceramic cup on a saucer, with steam, holding an "AV" monogram
+// (thick/thin strokes, small serifs). Draws in currentColor so it works on
+// light and dark backgrounds.
 export default function LogoMark({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-      <path
-        d="M16.5 4H31.5M19.5 4C20.5 5.5 20.5 7.5 20.5 9.5C20.5 12.5 8.5 15.5 8.5 27C8.5 35.5 13.5 41 18.5 43H29.5C34.5 41 39.5 35.5 39.5 27C39.5 15.5 27.5 12.5 27.5 9.5C27.5 7.5 27.5 5.5 28.5 4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <g transform="translate(24 30) scale(0.68) translate(-24 -23.5)" stroke="currentColor" fill="none">
+      <g fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 17H35C35 29 30.5 36.5 21 36.5C11.5 36.5 7 29 7 17Z" />
+        <path d="M34.6 21C41.5 20 42 29.5 32 31" />
+        <path d="M6 40.5C13 43.5 31 43.5 38 40.5" />
+        <path d="M17 13C15.5 11 18.5 9.5 17 7.5" strokeWidth="1" />
+        <path d="M22.5 13C21 10.5 24.5 9 22.5 5" strokeWidth="1" />
+        <path d="M28 13C26.5 11 29.5 9.5 28 7.5" strokeWidth="1" />
+      </g>
+      <g transform="translate(21 26.5) scale(0.5) translate(-24 -23.5)" stroke="currentColor" fill="none">
         <line x1="12" y1="34" x2="20" y2="13" strokeWidth="1.5" />
         <polygon points="18.2,13 21.8,13 29.8,34 26.2,34" fill="currentColor" stroke="none" />
         <line x1="28" y1="34" x2="36" y2="13" strokeWidth="1.5" />

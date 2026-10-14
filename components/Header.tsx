@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCart } from "./CartProvider";
 import SearchBox, { SearchIcon } from "./SearchBox";
+import LogoMark from "./LogoMark";
 
 const NAV_LINKS = [
   { href: "/about", label: "About Us" },
@@ -98,7 +99,7 @@ export default function Header({ categories = [] }: { categories?: NavCategory[]
     <header className="site-header">
       <div className="container site-header-inner">
         <Link href="/" className="logo" onClick={() => setMenuOpen(false)}>
-          <span className="logo-mark">AV</span>
+          <LogoMark className="logo-mark" />
           <span>
             <strong>A.V CERAMIC</strong>
             <small>ENTERPRISES</small>

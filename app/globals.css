@@ -5251,3 +5251,30 @@ h2 {
   font-size: 13px;
   font-weight: 600;
 }
+
+.account-signout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.text-link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: inherit;
+  opacity: 0.7;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.text-link-btn:hover {
+  opacity: 1;
+}
+
+.text-link-btn:disabled {
+  cursor: wait;
+}

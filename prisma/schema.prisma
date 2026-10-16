@@ -153,6 +153,8 @@ model Customer {
   role         Role       @default(CUSTOMER)
   isActive     Boolean    @default(true)
   lastLoginAt  DateTime?
+  /// "Sign out of all devices": logins from before this time no longer work.
+  sessionsRevokedAt DateTime?
   addresses    Address[]
   orders       Order[]
   cart         Cart?
@@ -162,6 +164,16 @@ model Customer {
   updatedAt    DateTime   @updatedAt
 
   @@index([phone])
+}
+
+// Logins that were signed out. A copied login cookie stops working once its
+// session id is here. Rows can be deleted after expiresAt (the cookie's own
+// expiry), and are cleaned up on later sign-outs.
+model RevokedSession {
+  id        String   @id
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }
 
 // One-time codes sent by SMS to verify a mobile number at sign-up.

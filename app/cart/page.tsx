@@ -8,6 +8,7 @@ import CartSuggestions from "../../components/CartSuggestions";
 import CheckoutSteps from "../../components/CheckoutSteps";
 import { POLICY } from "../../lib/business";
 import { CartLine, type DeliveryRules, getCartTotals } from "../../lib/cart";
+import { formatRupees } from "../../lib/order-display";
 import { savingsPerUnit } from "../../lib/pricing";
 
 const MAX_LINE_QUANTITY = 99;
@@ -75,7 +76,7 @@ export default function CartPage() {
         run(item, () => removeItem(item.slug));
     }
 
-    const { subtotal, delivery, total } = getCartTotals(cart, deliveryRules);
+    const { subtotal, delivery, gst, total } = getCartTotals(cart, deliveryRules);
     const mrpSavings = cart
         .filter((item) => item.available)
         .reduce((sum, item) => sum + Math.round(savingsPerUnit(item) * item.quantity * 100), 0) / 100;
@@ -289,6 +290,14 @@ export default function CartPage() {
                         </div>
 
                         <div className="summary-row">
+                            <span>GST</span>
+
+                            <strong>
+                                {formatRupees(gst)}
+                            </strong>
+                        </div>
+
+                        <div className="summary-row">
                             <span>Delivery</span>
 
                             <strong>
@@ -310,7 +319,7 @@ export default function CartPage() {
                             <span>Total</span>
 
                             <strong>
-                                ₹{total.toLocaleString("en-IN")}
+                                {formatRupees(total)}
                             </strong>
                         </div>
 

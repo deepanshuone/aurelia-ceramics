@@ -6,6 +6,7 @@
 // working without them.
 
 import { createHmac, timingSafeEqual } from "crypto";
+import { CAPTCHA_UNAVAILABLE } from "./captcha-shared";
 
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
@@ -16,6 +17,14 @@ export function isCaptchaConfigured() {
 /** True when the token passes Turnstile, or when the check is switched off. */
 export async function verifyCaptcha(token: unknown, ip: string) {
   if (!isCaptchaConfigured()) return true;
+  // The widget couldn't run in the browser because of a Cloudflare setup
+  // problem (e.g. error 110200: this domain isn't in the widget's hostnames).
+  // Let customers through like the other setup failures below; rate limits
+  // still apply.
+  if (token === CAPTCHA_UNAVAILABLE) {
+    console.error("Turnstile widget unavailable in the browser; bot check skipped. Check the site key's allowed hostnames.");
+    return true;
+  }
   if (typeof token !== "string" || !token || token.length > 2048) return false;
 
   const form = new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY ?? "", response: token });

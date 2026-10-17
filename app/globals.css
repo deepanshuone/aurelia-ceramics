@@ -3666,6 +3666,12 @@ h2 {
   min-height: 65px;
 }
 
+.captcha-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .form-error {
   margin: 0;
   padding: 12px 16px;

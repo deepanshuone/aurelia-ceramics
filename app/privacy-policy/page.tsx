@@ -2,12 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PolicyPage from "../../components/PolicyPage";
 import { BUSINESS } from "../../lib/business";
+import { GOOGLE_TAG_ID, META_PIXEL_ID, TRACKING_ENABLED } from "../../lib/analytics";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: `How ${BUSINESS.brand} collects, uses and protects your personal information.`,
   alternates: { canonical: "/privacy-policy" },
 };
+
+// Only named when their tracking ID is set (lib/analytics.ts).
+const AD_PARTNERS = [META_PIXEL_ID && "Meta (Facebook and Instagram)", GOOGLE_TAG_ID && "Google"]
+  .filter(Boolean)
+  .join(" and ");
 
 export default function PrivacyPolicyPage() {
   return (
@@ -64,6 +70,11 @@ export default function PrivacyPolicyPage() {
           <li>Razorpay, to process online payments and refunds;</li>
           <li>courier and logistics partners, to deliver your order;</li>
           <li>our website hosting and database providers, which store data on our behalf;</li>
+          {TRACKING_ENABLED && (
+            <li>
+              {AD_PARTNERS}, to measure how our ads perform (see Cookies below);
+            </li>
+          )}
           <li>government or law-enforcement authorities, where the law requires it.</li>
         </ul>
       </section>
@@ -72,7 +83,10 @@ export default function PrivacyPolicyPage() {
         <h2>Cookies and local storage</h2>
         <p>
           We use a secure cookie to keep you signed in, and your browser&apos;s local storage to remember a guest
-          shopping cart. We do not use advertising or tracking cookies.
+          shopping cart.{" "}
+          {TRACKING_ENABLED
+            ? `We also use advertising and analytics cookies from ${AD_PARTNERS} to see which of our ads bring visitors and orders. They record pages you visit and products you view, add to cart or buy, never your payment details. You can block them in your browser settings, or turn off ad personalisation in your account settings with them.`
+            : "We do not use advertising or tracking cookies."}
         </p>
       </section>
 

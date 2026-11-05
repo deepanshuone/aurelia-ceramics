@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 // Default social-share card (WhatsApp, Facebook, X, LinkedIn…) for every page
 // that doesn't set its own image. Products use their own photo.
-export const alt = "AURELIA Ceramics — premium ceramic tableware";
+export const alt = "A.V CERAMIC ENTERPRISES — premium ceramic tableware";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -22,8 +22,8 @@ export default function OpengraphImage() {
         }}
       >
         <div style={{ fontSize: 26, letterSpacing: 8, color: "#c5a77d", display: "flex" }}>PREMIUM CERAMIC TABLEWARE</div>
-        <div style={{ fontSize: 120, marginTop: 24, lineHeight: 1.05, display: "flex" }}>AURELIA</div>
-        <div style={{ fontSize: 44, marginTop: 8, letterSpacing: 14, display: "flex" }}>CERAMICS</div>
+        <div style={{ fontSize: 110, marginTop: 24, lineHeight: 1.05, display: "flex" }}>A.V CERAMIC</div>
+        <div style={{ fontSize: 44, marginTop: 8, letterSpacing: 14, display: "flex" }}>ENTERPRISES</div>
         <div style={{ fontSize: 30, marginTop: 40, color: "#cfc8bb", display: "flex" }}>
           Dinner sets, plates, bowls, mugs &amp; hand-painted Khurja pottery
         </div>

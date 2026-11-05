@@ -33,6 +33,12 @@ Edit **`lib/business.ts`** — it feeds the footer, contact page and all four po
 | `MSG91_AUTH_KEY`, `MSG91_OTP_TEMPLATE_ID` | Optional: mobile OTP at sign-up (MSG91 auth key + a DLT-approved OTP template with `##OTP##`). Without them, sign-up skips the OTP |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Optional: bot check (Cloudflare Turnstile) on login, sign-up and the sign-up OTP. Free at dash.cloudflare.com → Turnstile → Add widget (add your domain and `localhost`). Without both, the check is skipped |
 
+| `NEXT_PUBLIC_META_PIXEL_ID` | Optional: Meta Pixel for Facebook/Instagram ads (Events Manager → Data sources → your pixel's ID, digits only) |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Optional: Google Analytics 4, e.g. `G-XXXXXXXXXX` |
+| `NEXT_PUBLIC_GOOGLE_ADS_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL` | Optional: Google Ads conversion tag, e.g. `AW-123456789` and the label of your "Purchase" conversion (the part after the `/` in `send_to`). Skip the label if you import GA4 purchases into Google Ads instead |
+
+The ad IDs are read at build time: **redeploy** after adding or changing them. Tracked events: page view, product view, add to cart, begin checkout, and purchase (once per confirmed order, paid online or COD, with the order ID so it isn't counted twice). Admin pages are never tracked.
+
 Without the Razorpay keys the shop still works — checkout offers **Cash on Delivery** only.
 
 **Order emails** (confirmation to the customer + alert to you) need one of:
@@ -42,7 +48,7 @@ Without the Razorpay keys the shop still works — checkout offers **Cash on Del
 | `SMTP_HOST` / `SMTP_PORT` | `smtp.gmail.com` / `465` |
 | `SMTP_USER` | your Gmail address |
 | `SMTP_PASS` | a Google **App Password** (myaccount.google.com/apppasswords) |
-| `EMAIL_FROM` | optional, e.g. `Aurelia Ceramics <yourshop@gmail.com>` |
+| `EMAIL_FROM` | optional, e.g. `A.V Ceramic Enterprises <yourshop@gmail.com>` |
 | `ORDER_ALERT_EMAIL` | where new-order alerts go |
 
 or `RESEND_API_KEY` (Resend needs a verified domain). Without either, orders still work — emails are just skipped.

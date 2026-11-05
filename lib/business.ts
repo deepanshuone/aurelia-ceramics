@@ -6,9 +6,9 @@
 
 export const BUSINESS = {
   /** Brand name shown to customers. */
-  brand: "AURELIA Ceramics",
+  brand: "A.V CERAMIC ENTERPRISES",
   /** Registered legal name of the business (proprietorship / LLP / Pvt Ltd). PLACEHOLDER */
-  legalName: "Aurelia Ceramics",
+  legalName: "A.V Ceramic Enterprises",
   email: "hello@aureliaceramics.in", // PLACEHOLDER — use an inbox you actually monitor
   phone: "+91 00000 00000", // PLACEHOLDER
   /**

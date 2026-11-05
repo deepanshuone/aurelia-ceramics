@@ -5,7 +5,7 @@ import LoginForm from "./LoginForm";
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
   title: "Login",
-  description: "Sign in to your Aurelia Ceramics account.",
+  description: "Sign in to your A.V Ceramic Enterprises account.",
 };
 
 export default function LoginPage() {

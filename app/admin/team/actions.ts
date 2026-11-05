@@ -8,7 +8,7 @@ import { prisma } from "../../../lib/prisma";
 import { ASSIGNABLE_ROLES, assignRole } from "../../../lib/staff-access";
 
 const grantSchema = z.object({
-  email: z.string().trim().toLowerCase().email("Enter the email address of their Aurelia account."),
+  email: z.string().trim().toLowerCase().email("Enter the email address of their A.V Ceramic Enterprises account."),
   role: z.enum(["ADMIN", "EDITOR", "VIEWER"], { message: "Choose an access level." }),
 });
 

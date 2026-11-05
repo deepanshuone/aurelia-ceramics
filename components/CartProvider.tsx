@@ -19,6 +19,7 @@ import {
   readGuestCart,
   writeGuestCart,
 } from "../lib/cart";
+import { trackAddToCart } from "../lib/analytics";
 
 type MutationResult = { ok: true } | { ok: false; error: string };
 
@@ -171,6 +172,7 @@ export default function CartProvider({
       if (line && !line.available) {
         return { ok: false as const, error: `${line.name} is out of stock.` };
       }
+      if (line) trackAddToCart({ id: line.productId, name: line.name, price: line.price, quantity });
       return { ok: true as const };
     },
     [mutate]

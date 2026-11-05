@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       links={links}
       sidebar={
         <>
-          <p className="admin-sidebar-title">AURELIA ADMIN</p>
+          <p className="admin-sidebar-title">A.V CERAMIC ADMIN</p>
           <AdminNav links={links} />
           <p className="admin-sidebar-user">
             Signed in as

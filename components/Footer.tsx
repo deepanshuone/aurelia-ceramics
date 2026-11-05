@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BUSINESS } from "../lib/business";
 import { getNavCategories } from "../lib/nav";
+import LogoMark from "./LogoMark";
 
 export default async function Footer() {
   // Largest categories first, so the footer highlights the main ranges.
@@ -11,10 +12,10 @@ export default async function Footer() {
       <div className="container footer-grid">
         <div>
           <Link href="/" className="logo footer-logo">
-            <span className="logo-mark">A</span>
+            <LogoMark className="logo-mark" />
             <span>
-              <strong>AURELIA</strong>
-              <small>CERAMICS</small>
+              <strong>A.V CERAMIC</strong>
+              <small>ENTERPRISES</small>
             </span>
           </Link>
 

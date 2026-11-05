@@ -5,7 +5,7 @@ import { BUSINESS } from '../../lib/business';
 
 export const metadata: Metadata = {
   title: 'Contact Us',
-  description: 'Get in touch with Aurelia Ceramics for product enquiries, wholesale requirements, hotel projects or custom/OEM requests.',
+  description: 'Get in touch with A.V Ceramic Enterprises for product enquiries, wholesale requirements, hotel projects or custom/OEM requests.',
 };
 
 export default function Contact() {

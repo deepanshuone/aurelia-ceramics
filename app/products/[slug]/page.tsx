@@ -64,7 +64,7 @@ export async function generateMetadata({
 
   const description =
     product.description ??
-    `${product.name} - premium ceramic tableware from Aurelia Ceramics.`;
+    `${product.name} - premium ceramic tableware from A.V Ceramic Enterprises.`;
 
   return {
     title: product.name,

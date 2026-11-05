@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../../../components/CartProvider";
+import { trackViewItem } from "../../../lib/analytics";
 
 type ProductPurchaseProps = {
   product: {
@@ -25,6 +26,10 @@ export default function ProductPurchase({ product }: ProductPurchaseProps) {
   const [error, setError] = useState<string | null>(null);
 
   const outOfStock = product.stock <= 0;
+
+  useEffect(() => {
+    trackViewItem({ id: product.id, name: product.name, price: product.price });
+  }, [product.id, product.name, product.price]);
 
   function decreaseQuantity() {
     setQuantity((current) => Math.max(1, current - 1));

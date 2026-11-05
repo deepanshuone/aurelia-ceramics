@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import Providers from '../components/Providers';
 import AnnouncementBar from '../components/AnnouncementBar';
 import WhatsAppFloat from '../components/WhatsAppFloat';
+import AdTracking from '../components/AdTracking';
 import { whatsappLink } from '../lib/business';
 import { getNavCategories } from '../lib/nav';
 import { getDeliveryRules } from '../lib/store-settings';
@@ -25,8 +26,8 @@ export const metadata: Metadata = {
   // Makes relative canonical/OG URLs absolute.
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: 'AURELIA Ceramics | Crafted for Modern Tables',
-    template: '%s | AURELIA Ceramics',
+    default: 'A.V CERAMIC ENTERPRISES | Crafted for Modern Tables',
+    template: '%s | A.V CERAMIC ENTERPRISES',
   },
   description: SITE_DESCRIPTION,
   // Every page canonicalises to itself unless it sets its own (products, catalogue).
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: SITE_NAME,
     locale: 'en_IN',
-    title: 'AURELIA Ceramics | Crafted for Modern Tables',
+    title: 'A.V CERAMIC ENTERPRISES | Crafted for Modern Tables',
     description: SITE_DESCRIPTION,
   },
   twitter: { card: 'summary_large_image' },
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <Footer />
           <WhatsAppFloat href={whatsappLink('Hello, I have a question about your ceramic products.')} />
         </Providers>
+        <AdTracking />
       </body>
     </html>
   );

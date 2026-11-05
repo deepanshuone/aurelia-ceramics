@@ -46,6 +46,7 @@ export function buildConfirmationEmail(order: OrderForEmail, processingDays?: nu
   const payment = paymentLine(order);
   const discount = Number(order.discount);
   const delivery = Number(order.delivery);
+  const gst = Number(order.gst);
   const placed = order.createdAt.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
 
   const itemRows = order.items
@@ -101,6 +102,7 @@ export function buildConfirmationEmail(order: OrderForEmail, processingDays?: nu
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;">
             ${totalRow("Subtotal", rupees(order.subtotal))}
             ${discount > 0 ? totalRow(`Discount${order.coupon ? ` (${esc(order.coupon.code)})` : ""}`, `−${rupees(discount)}`) : ""}
+            ${gst > 0 ? totalRow("GST", rupees(gst)) : ""}
             ${totalRow("Delivery", delivery === 0 ? "FREE" : rupees(delivery))}
             ${totalRow("Total", rupees(order.total), true)}
           </table>
@@ -152,6 +154,7 @@ export function buildConfirmationEmail(order: OrderForEmail, processingDays?: nu
     ``,
     `Subtotal: ${rupees(order.subtotal)}`,
     ...(discount > 0 ? [`Discount${order.coupon ? ` (${order.coupon.code})` : ""}: -${rupees(discount)}`] : []),
+    ...(gst > 0 ? [`GST: ${rupees(gst)}`] : []),
     `Delivery: ${delivery === 0 ? "FREE" : rupees(delivery)}`,
     `Total: ${rupees(order.total)}`,
     ``,

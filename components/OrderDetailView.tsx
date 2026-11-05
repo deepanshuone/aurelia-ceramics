@@ -63,6 +63,7 @@ export default async function OrderDetailView({
   const progressIndex = ORDER_PROGRESS.indexOf(order.status);
   const discount = Number(order.discount);
   const delivery = Number(order.delivery);
+  const gst = Number(order.gst);
   const refunded = Number(order.refundedAmount);
   const storeDays = await getStoreProcessingDays();
   const processing = processingProgress(order, storeDays);
@@ -289,6 +290,13 @@ export default async function OrderDetailView({
               <div className="summary-row discount">
                 <span>Discount{order.coupon ? ` (${order.coupon.code})` : ""}</span>
                 <strong>−{formatRupees(discount)}</strong>
+              </div>
+            )}
+
+            {gst > 0 && (
+              <div className="summary-row">
+                <span>GST</span>
+                <strong>{formatRupees(gst)}</strong>
               </div>
             )}
 

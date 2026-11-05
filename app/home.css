@@ -613,6 +613,74 @@
   transition-delay: 0s;
 }
 
+/* Glaze swatches under the cup. */
+.hero-cup-glazes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.8s ease 1.4s, transform 0.8s ease 1.4s;
+  pointer-events: none;
+}
+
+.hero-cup.is-ready .hero-cup-glazes {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.hero-cup-swatches {
+  display: flex;
+  gap: 10px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(20, 17, 14, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hero-cup-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 45%),
+    var(--swatch);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25), 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hero-cup-swatch:hover {
+  transform: scale(1.15);
+}
+
+.hero-cup-swatch.is-active {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px rgba(20, 17, 14, 0.9), 0 0 0 3.5px rgba(255, 255, 255, 0.9), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.hero-cup-swatch:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+
+.hero-cup-glaze-name {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
 @media (max-width: 900px) {
   .hero.has-cup {
     flex-direction: column;
@@ -629,19 +697,39 @@
     position: relative;
     right: auto;
     width: 100%;
-    height: 320px;
+    height: 360px;
     margin-top: 8px;
   }
 
+  .hero-cup-stage {
+    bottom: 64px;
+  }
+
   .hero-cup-hint {
-    bottom: 4px;
+    bottom: 70px;
+  }
+
+  .hero-cup-glazes {
+    bottom: 0;
+  }
+
+  .hero-cup-swatches {
+    gap: 12px;
+  }
+
+  /* Bigger tap targets on phones. */
+  .hero-cup-swatch {
+    width: 24px;
+    height: 24px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hero-cup-stage canvas,
   .hero-cup-glow,
-  .hero-cup-hint {
+  .hero-cup-hint,
+  .hero-cup-glazes,
+  .hero-cup-swatch {
     transition: none;
     transform: none;
   }

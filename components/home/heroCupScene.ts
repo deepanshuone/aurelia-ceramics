@@ -4,21 +4,30 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 /**
  * The hero's 3D cup and saucer, built from code (no model file to download).
  * The cup leans towards the pointer, spins when dragged, hops when tapped and
- * its coffee sloshes with the motion. Rendering pauses while the hero is off
- * screen or the tab is hidden.
+ * its coffee sloshes with the motion. Its glaze can be re-coloured: the new
+ * colour pours down the cup from the rim and then spreads across the saucer.
+ * Rendering pauses while the hero is off screen or the tab is hidden.
  */
 
 export type HeroCupOptions = {
   reducedMotion: boolean;
+  /** Starting glaze colour (CSS hex). */
+  glaze?: string;
   onFirstInteraction?: () => void;
 };
 
 export type HeroCupScene = {
   setActive(active: boolean): void;
+  /** Pour a new glaze colour over the cup and saucer. */
+  setGlaze(color: string): void;
   dispose(): void;
 };
 
-const GLAZE = new THREE.Color("#efe6d8");
+const DEFAULT_GLAZE = "#efe6d8";
+// Glazed areas are baked near-white and tinted in the shader, so the colour
+// can change without rebuilding the textures.
+const GLAZE = new THREE.Color("#ffffff");
+const POUR_SECONDS = 1.7;
 const CLAY = new THREE.Color("#c29873");
 const RIM = new THREE.Color("#6b5947");
 
@@ -123,10 +132,10 @@ function surfaceMaps(profile: Profile, dipLine: number, rimFrom: number, seed: n
       color[i + 1] = Math.round(tmp.g * 255);
       color[i + 2] = Math.round(tmp.b * 255);
       color[i + 3] = 255;
-      // R = clearcoat strength, G = roughness.
+      // R = clearcoat strength, G = roughness, B = glaze mask (tinted area).
       finish[i] = bare ? 0 : 255;
       finish[i + 1] = bare ? 235 : rim ? 90 : 70;
-      finish[i + 2] = 0;
+      finish[i + 2] = bare || rim ? 0 : 255;
       finish[i + 3] = 255;
     }
   }
@@ -154,6 +163,87 @@ function ceramicMaterial(maps: { map: THREE.Texture; finishMap: THREE.Texture })
     clearcoatRoughness: 0.12,
     side: THREE.DoubleSide,
   });
+}
+
+type GlazeUniforms = {
+  uGlazeFrom: { value: THREE.Color };
+  uGlazeTo: { value: THREE.Color };
+  uGlazeProgress: { value: number };
+  uGlazeStart: { value: number };
+  uGlazeEnd: { value: number };
+  uGlazeWave: { value: number };
+};
+
+/**
+ * Lets a material's glaze be recoloured with a pour: everything past a wavy
+ * line takes the new colour, and the line sweeps from `start` to `end`
+ * (height on the cup, distance from the centre on the saucer). Areas outside
+ * the glaze mask (bare clay, painted rim) keep their own colour.
+ */
+function addGlazePour(
+  material: THREE.MeshPhysicalMaterial,
+  glaze: THREE.Color,
+  sweep: { start: number; end: number; wave: number; radial?: boolean; masked?: boolean },
+): GlazeUniforms {
+  const uniforms: GlazeUniforms = {
+    uGlazeFrom: { value: glaze.clone() },
+    uGlazeTo: { value: glaze.clone() },
+    uGlazeProgress: { value: 1 },
+    uGlazeStart: { value: sweep.start },
+    uGlazeEnd: { value: sweep.end },
+    uGlazeWave: { value: sweep.wave },
+  };
+  const defines =
+    (sweep.radial ? "#define GLAZE_RADIAL\n" : "") + (sweep.masked ? "#define GLAZE_MASKED\n" : "");
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vGlazePos;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvGlazePos = position;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+${defines}
+varying vec3 vGlazePos;
+uniform vec3 uGlazeFrom;
+uniform vec3 uGlazeTo;
+uniform float uGlazeProgress;
+uniform float uGlazeStart;
+uniform float uGlazeEnd;
+uniform float uGlazeWave;`,
+      )
+      .replace(
+        "#include <map_fragment>",
+        `#include <map_fragment>
+{
+  float glazeMask = 1.0;
+  #ifdef GLAZE_MASKED
+    glazeMask = texture2D(roughnessMap, vRoughnessMapUv).b;
+  #endif
+  float angle = atan(vGlazePos.z, vGlazePos.x);
+  #ifdef GLAZE_RADIAL
+    float along = length(vGlazePos.xz);
+  #else
+    float along = vGlazePos.y;
+  #endif
+  float line = mix(uGlazeStart, uGlazeEnd, uGlazeProgress)
+    + uGlazeWave * (sin(angle * 3.0 + uGlazeProgress * 5.0) * 0.6 + sin(angle * 7.0 + 1.3) * 0.4);
+  // 1 where the new glaze has already reached.
+  float dir = sign(uGlazeEnd - uGlazeStart);
+  float reached = smoothstep(-0.025, 0.025, (line - along) * dir);
+  vec3 tint = mix(uGlazeFrom, uGlazeTo, reached);
+  // A wet, slightly brighter lip right at the flowing edge.
+  float pouring = step(0.001, uGlazeProgress) * step(uGlazeProgress, 0.999);
+  float lip = (1.0 - smoothstep(0.0, 0.06, abs(line - along))) * pouring;
+  tint *= 1.0 + 0.35 * lip;
+  diffuseColor.rgb *= mix(vec3(1.0), tint, glazeMask);
+}`,
+      );
+  };
+  // Make sure three.js doesn't share a program with an unpatched material.
+  material.customProgramCacheKey = () => `glaze-${sweep.radial ? "r" : "y"}-${sweep.masked ? "m" : "u"}`;
+  return uniforms;
 }
 
 function canvasTexture(size: number, draw: (ctx: CanvasRenderingContext2D, size: number) => void) {
@@ -223,6 +313,7 @@ function handleGeometry() {
 
 export function createHeroCupScene(container: HTMLElement, options: HeroCupOptions): HeroCupScene {
   const { reducedMotion } = options;
+  const startGlaze = new THREE.Color(options.glaze ?? DEFAULT_GLAZE);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
   renderer.setClearColor(0x000000, 0);
@@ -267,10 +358,10 @@ export function createHeroCupScene(container: HTMLElement, options: HeroCupOptio
   const saucerProfile = smoothProfile(SAUCER_PROFILE, SAUCER_RIM_INDEX, 120);
   const saucerMaps = surfaceMaps(saucerProfile, 0.045, 0.235, 7);
   textures.push(saucerMaps.map, saucerMaps.finishMap);
-  const saucer = new THREE.Mesh(
-    track(new THREE.LatheGeometry(saucerProfile.points, 128)),
-    trackMaterial(ceramicMaterial(saucerMaps)),
-  );
+  const saucerMaterial = trackMaterial(ceramicMaterial(saucerMaps));
+  // Spreads outwards from under the cup to the saucer's rim.
+  const saucerGlaze = addGlazePour(saucerMaterial, startGlaze, { start: 0, end: 1.95, wave: 0.07, radial: true, masked: true });
+  const saucer = new THREE.Mesh(track(new THREE.LatheGeometry(saucerProfile.points, 128)), saucerMaterial);
   set.add(saucer);
 
   const shadowTexture = softDotTexture("rgba(0,0,0,0.55)", "rgba(0,0,0,0)");
@@ -291,15 +382,19 @@ export function createHeroCupScene(container: HTMLElement, options: HeroCupOptio
   const cupMaps = surfaceMaps(cupProfile, 0.2, 1.235, 3);
   textures.push(cupMaps.map, cupMaps.finishMap);
   const glaze = trackMaterial(ceramicMaterial(cupMaps));
+  // Pours down from just above the rim to below the foot.
+  const cupSweep = { start: 1.45, end: -0.12, wave: 0.05, masked: true };
+  const cupGlaze = addGlazePour(glaze, startGlaze, cupSweep);
   cup.add(new THREE.Mesh(track(new THREE.LatheGeometry(cupProfile.points, 160)), glaze));
 
-  const handle = new THREE.Mesh(
-    track(handleGeometry()),
-    trackMaterial(
-      new THREE.MeshPhysicalMaterial({ color: GLAZE, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.12 }),
-    ),
+  const handleMaterial = trackMaterial(
+    new THREE.MeshPhysicalMaterial({ color: GLAZE, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.12 }),
   );
+  const handleGlaze = addGlazePour(handleMaterial, startGlaze, { ...cupSweep, masked: false });
+  const handle = new THREE.Mesh(track(handleGeometry()), handleMaterial);
   cup.add(handle);
+  const glazes = [cupGlaze, handleGlaze, saucerGlaze];
+  let pour = -1; // seconds into the current pour, -1 when idle
 
   const coffeeMap = coffeeTexture();
   textures.push(coffeeMap);
@@ -424,7 +519,8 @@ export function createHeroCupScene(container: HTMLElement, options: HeroCupOptio
 
   const frame = (timestamp?: number) => {
     timer.update(timestamp);
-    const dt = Math.min(timer.getDelta(), 1 / 20);
+    // The first frame after resuming can report a slightly negative delta.
+    const dt = THREE.MathUtils.clamp(timer.getDelta(), 0, 1 / 20);
     elapsed += dt;
     const ease = (rate: number) => 1 - Math.exp(-dt * rate);
 
@@ -469,6 +565,20 @@ export function createHeroCupScene(container: HTMLElement, options: HeroCupOptio
     slosh.clampLength(0, 0.1);
     coffeePivot.rotation.set(slosh.y, 0, -slosh.x);
 
+    // Glaze pour: cup first, then the saucer picks it up.
+    if (pour >= 0) {
+      pour += dt;
+      const t = Math.min(1, pour / POUR_SECONDS);
+      const cupT = THREE.MathUtils.smootherstep(t, 0, 0.62);
+      const saucerT = THREE.MathUtils.smootherstep(t, 0.42, 1);
+      cupGlaze.uGlazeProgress.value = handleGlaze.uGlazeProgress.value = cupT;
+      saucerGlaze.uGlazeProgress.value = saucerT;
+      if (t >= 1) {
+        pour = -1;
+        for (const g of glazes) g.uGlazeFrom.value.copy(g.uGlazeTo.value);
+      }
+    }
+
     // Steam rises from the cup's opening in world space.
     if (steam.length) {
       steamBoost = Math.max(0, steamBoost - dt * 0.6);
@@ -498,11 +608,35 @@ export function createHeroCupScene(container: HTMLElement, options: HeroCupOptio
     }
   };
 
+  const setGlaze = (color: string) => {
+    const next = new THREE.Color(color);
+    // A pour still running finishes instantly so the new one starts clean.
+    for (const g of glazes) {
+      g.uGlazeFrom.value.copy(g.uGlazeTo.value);
+      g.uGlazeTo.value.copy(next);
+    }
+    if (reducedMotion) {
+      for (const g of glazes) {
+        g.uGlazeFrom.value.copy(next);
+        g.uGlazeProgress.value = 1;
+      }
+      if (!running) renderer.render(scene, camera);
+      return;
+    }
+    for (const g of glazes) g.uGlazeProgress.value = 0;
+    pour = 0;
+    // A little flourish while it pours.
+    steamBoost = Math.max(steamBoost, 0.6);
+    spinVelocity = Math.sign(spinVelocity || 1) * Math.max(Math.abs(spinVelocity), 2.2);
+    if (!running) renderer.render(scene, camera);
+  };
+
   resize();
   frame();
 
   return {
     setActive,
+    setGlaze,
     dispose() {
       setActive(false);
       resizeObserver.disconnect();
